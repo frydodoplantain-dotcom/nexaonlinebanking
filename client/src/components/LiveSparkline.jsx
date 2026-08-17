@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 export default function LiveSparkline({
   color = '#f97316',
   gradientId = 'spark-grad-btc',
-  initialValues = [40, 48, 42, 55, 50, 62, 58, 70, 65, 82, 78, 90, 85, 95],
+  initialValues = [30, 65, 40, 75, 50, 85, 55, 90, 70, 95, 60, 100, 75, 95, 80, 110],
   height = 50,
   width = 180,
 }) {
@@ -14,56 +14,50 @@ export default function LiveSparkline({
   useEffect(() => {
     let active = true;
 
-    const updatePoints = () => {
+    const animateZigzag = () => {
       if (!active) return;
-      phaseRef.current += 0.05;
+      phaseRef.current += 0.08;
       const phase = phaseRef.current;
 
-      setPoints((prev) => {
-        return prev.map((val, idx) => {
-          // Keep first and last anchored, apply wave micro-fluctuations to inner points
-          if (idx === 0) return val;
-          const noise = Math.sin(phase + idx * 0.7) * 1.5 + Math.cos(phase * 1.3 + idx) * 1.2;
-          const base = initialValues[idx] || val;
-          const newVal = base + noise;
-          return Math.max(10, Math.min(height - 5, newVal));
+      setPoints(() => {
+        return initialValues.map((baseVal, idx) => {
+          // Keep start anchored, animate inner and end points in sharp zigzag oscillations
+          if (idx === 0) return baseVal;
+          const shift = Math.sin(phase * 1.5 + idx * 1.1) * 6 + Math.cos(phase * 2.2 + idx * 0.8) * 4;
+          const currentVal = baseVal + shift;
+          return Math.max(8, Math.min(height - 6, currentVal));
         });
       });
 
-      animRef.current = requestAnimationFrame(updatePoints);
+      animRef.current = requestAnimationFrame(animateZigzag);
     };
 
-    animRef.current = requestAnimationFrame(updatePoints);
+    animRef.current = requestAnimationFrame(animateZigzag);
     return () => {
       active = false;
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
   }, [initialValues, height]);
 
-  // Generate SVG path string (smooth Bezier curve)
-  const minVal = 0;
-  const maxVal = 100;
+  const maxVal = Math.max(...points, 120);
   const stepX = width / (points.length - 1);
 
+  // Map points to (x, y) sharp vertex coordinates
   const coords = points.map((val, i) => {
     const x = i * stepX;
-    const y = height - (val / maxVal) * (height - 8) - 4;
+    const y = height - (val / maxVal) * (height - 10) - 5;
     return { x, y };
   });
 
-  // Create smooth Bezier cubic curve path
-  let pathD = `M ${coords[0].x},${coords[0].y}`;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const curr = coords[i];
-    const next = coords[i + 1];
-    const cp1x = curr.x + (next.x - curr.x) / 2;
-    const cp1y = curr.y;
-    const cp2x = curr.x + (next.x - curr.x) / 2;
-    const cp2y = next.y;
-    pathD += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${next.x},${next.y}`;
-  }
+  // Construct sharp ZIGZAG polyline path string (M x0,y0 L x1,y1 L x2,y2 ...)
+  const pathD = coords.reduce((acc, pt, i) => {
+    return i === 0 ? `M ${pt.x},${pt.y}` : `${acc} L ${pt.x},${pt.y}`;
+  }, '');
 
+  // Closed area path for background gradient fill
   const areaD = `${pathD} L ${width},${height} L 0,${height} Z`;
+
+  const lastPt = coords[coords.length - 1];
 
   return (
     <svg
@@ -75,11 +69,11 @@ export default function LiveSparkline({
     >
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
           <stop offset="100%" stopColor={color} stopOpacity="0.0" />
         </linearGradient>
         <filter id={`glow-${gradientId}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
@@ -87,30 +81,40 @@ export default function LiveSparkline({
         </filter>
       </defs>
 
-      {/* Gradient Area Fill */}
+      {/* Area Fill Under Sharp Zigzag Line */}
       <path d={areaD} fill={`url(#${gradientId})`} />
 
-      {/* Glowing Line */}
+      {/* Sharp Glowing Zigzag Line */}
       <path
         d={pathD}
         fill="none"
         stroke={color}
-        strokeWidth="2.5"
-        strokeLinecap="round"
+        strokeWidth="2.2"
         strokeLinejoin="round"
+        strokeLinecap="round"
         filter={`url(#glow-${gradientId})`}
         className="sparkline-path"
       />
 
-      {/* Live Pulsing End Dot */}
-      {coords.length > 0 && (
-        <circle
-          cx={coords[coords.length - 1].x}
-          cy={coords[coords.length - 1].y}
-          r="3.5"
-          fill={color}
-          className="sparkline-dot"
-        />
+      {/* Live Glowing Leading End Dot */}
+      {lastPt && (
+        <>
+          <circle
+            cx={lastPt.x}
+            cy={lastPt.y}
+            r="6"
+            fill={color}
+            opacity="0.3"
+          />
+          <circle
+            cx={lastPt.x}
+            cy={lastPt.y}
+            r="3"
+            fill="#ffffff"
+            stroke={color}
+            strokeWidth="1.5"
+          />
+        </>
       )}
     </svg>
   );

@@ -18,7 +18,7 @@ export default function Home() {
       isPositive: true,
       color: '#f97316',
       gradientId: 'spark-btc',
-      values: [35, 42, 38, 52, 48, 65, 60, 78, 72, 88, 82, 92, 85, 96],
+      values: [25, 65, 35, 80, 45, 90, 55, 75, 60, 95, 70, 105, 80, 115, 85, 110],
       icon: (
         <div className="crypto-icon-badge btc-badge">
           <span>₿</span>
@@ -34,7 +34,7 @@ export default function Home() {
       isPositive: true,
       color: '#3b82f6',
       gradientId: 'spark-eth',
-      values: [30, 45, 35, 60, 50, 70, 62, 85, 75, 90, 80, 95],
+      values: [30, 75, 45, 85, 55, 70, 40, 90, 60, 100, 70, 110, 85, 115],
       icon: (
         <div className="crypto-icon-badge eth-badge">
           <span>Ξ</span>
@@ -50,7 +50,7 @@ export default function Home() {
       isPositive: true,
       color: '#10b981',
       gradientId: 'spark-usdt',
-      values: [50, 49, 51, 50, 50, 51, 49, 50, 50, 51, 50, 50],
+      values: [50, 65, 35, 60, 40, 65, 45, 55, 45, 60, 50, 58, 48, 55],
       icon: (
         <div className="crypto-icon-badge usdt-badge">
           <span>₮</span>
@@ -66,7 +66,7 @@ export default function Home() {
       isPositive: true,
       color: '#a855f7',
       gradientId: 'spark-sol',
-      values: [25, 40, 32, 58, 52, 68, 64, 82, 76, 94, 88, 98],
+      values: [20, 80, 35, 90, 45, 75, 55, 100, 65, 85, 70, 115, 80, 120],
       icon: (
         <div className="crypto-icon-badge sol-badge">
           <span>S</span>
