@@ -1,0 +1,545 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+  DEACTIVATED
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  FIXED_DEPOSIT
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  INFO_REQUESTED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRANSFER
+  PAYMENT
+  REFUND
+  INTEREST
+  FEE
+  ADJUSTMENT
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT
+  SAVINGS_TRANSFER
+  SAVINGS_FUNDING
+  FIXED_DEPOSIT_FUNDING
+  CARD_TRANSACTION
+  CARD_FEE
+  REVERSAL
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  RESUBMISSION_REQUESTED
+}
+
+enum FixedDepositStatus {
+  ACTIVE
+  MATURED
+  WITHDRAWN
+  CANCELLED
+}
+
+enum TransactionStatus {
+  COMPLETED
+  PENDING
+  FAILED
+  CANCELLED
+}
+
+enum TransferType {
+  INTERNAL
+  EXTERNAL
+  INCOMING_EXTERNAL
+}
+
+enum TransferStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum LoanStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ACTIVE
+  COMPLETED
+  OVERDUE
+}
+
+enum CardType {
+  VIRTUAL
+  PHYSICAL
+}
+
+enum CardStatus {
+  PENDING
+  ACTIVE
+  FROZEN
+  CANCELLED
+  REJECTED
+}
+
+enum NotificationType {
+  ACCOUNT
+  TRANSFER
+  LOAN
+  CARD
+  SECURITY
+  SYSTEM
+  SUPPORT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum LedgerDirection {
+  DEBIT
+  CREDIT
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(CUSTOMER)
+  status       UserStatus @default(PENDING)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  profile              UserProfile?
+  pinCredential        PinCredential?
+  accounts             Account[]
+  applications         AccountApplication[]
+  transactions         Transaction[]
+  transfersSent        Transfer[]           @relation("TransferSender")
+  transfersReceived    Transfer[]           @relation("TransferRecipient")
+  loanApplications     LoanApplication[]
+  loans                Loan[]
+  cardRequests         CardRequest[]
+  cards                Card[]
+  notifications        Notification[]
+  supportTickets       SupportTicket[]
+  auditLogsAsActor     AuditLog[]           @relation("AuditActor")
+  passwordResetTokens  PasswordResetToken[]
+  ledgerEntriesCreated LedgerEntry[]        @relation("LedgerCreator")
+  fixedDeposits        FixedDeposit[]
+}
+
+model UserProfile {
+  id                 String    @id @default(uuid())
+  userId             String    @unique
+  firstName          String
+  middleName         String?
+  lastName           String
+  phone              String?
+  dateOfBirth        DateTime?
+  gender             String?
+  photoPath          String?
+  country            String
+  state              String?
+  city               String?
+  address            String?
+  zip                String?
+  accountType        AccountType @default(CHECKING)
+  idType             String?
+  idNumber           String?
+  idDocumentPath     String?
+  kycStatus          KycStatus   @default(PENDING)
+  kycRejectionReason String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PinCredential {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  pinHash        String
+  enabled        Boolean   @default(true)
+  locked         Boolean   @default(false)
+  mustChange     Boolean   @default(false)
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AccountApplication {
+  id            String            @id @default(uuid())
+  applicationId String            @unique
+  userId        String
+  status        ApplicationStatus @default(PENDING)
+  adminNotes    String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id               String        @id @default(uuid())
+  userId           String
+  accountNumber    String        @unique
+  type             AccountType   @default(CHECKING)
+  currency         String
+  balance          Float         @default(0)
+  availableBalance Float         @default(0)
+  status           AccountStatus @default(ACTIVE)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     Transaction[]
+  ledgerEntries    LedgerEntry[]
+  transfersFrom    Transfer[]        @relation("TransferFromAccount")
+  transfersTo      Transfer[]        @relation("TransferToAccount")
+  cardTransactions CardTransaction[]
+  fixedDeposits    FixedDeposit[]
+}
+
+model FixedDeposit {
+  id                    String             @id @default(uuid())
+  userId                String
+  accountId             String
+  principal             Float
+  currency              String
+  durationMonths        Int
+  interestRate          Float
+  expectedMaturityValue Float
+  startDate             DateTime           @default(now())
+  maturityDate          DateTime
+  status                FixedDepositStatus @default(ACTIVE)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+}
+
+model LedgerEntry {
+  id            String          @id @default(uuid())
+  accountId     String
+  transactionId String?
+  direction     LedgerDirection
+  amount        Float
+  currency      String
+  balanceBefore Float
+  balanceAfter  Float
+  reference     String?
+  description   String?
+  createdById   String?
+  createdAt     DateTime        @default(now())
+
+  account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id])
+  createdBy   User?        @relation("LedgerCreator", fields: [createdById], references: [id])
+}
+
+model Transaction {
+  id              String            @id @default(uuid())
+  reference       String            @unique
+  userId          String
+  accountId       String
+  type            TransactionType
+  amount          Float
+  currency        String
+  fee             Float             @default(0)
+  status          TransactionStatus @default(COMPLETED)
+  description     String?
+  senderName      String?
+  senderBank      String?
+  senderAccount   String?
+  senderCountry   String?
+  recipientName   String?
+  recipientBank   String?
+  recipientAccount String?
+  recipientCountry String?
+  transferId      String?
+  transactionDate DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account       Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transfer      Transfer?     @relation(fields: [transferId], references: [id])
+  ledgerEntries LedgerEntry[]
+}
+
+model Transfer {
+  id                  String         @id @default(uuid())
+  reference           String         @unique
+  type                TransferType
+  status              TransferStatus @default(PENDING)
+  senderUserId        String
+  recipientUserId     String?
+  fromAccountId       String?
+  toAccountId         String?
+  amount              Float
+  fee                 Float          @default(0)
+  currency            String
+  purpose             String?
+  description         String?
+  adminNotes          String?
+  externalBankName    String?
+  externalAccountName String?
+  externalAccountNum  String?
+  externalCountry     String?
+  externalSwift       String?
+  externalIban        String?
+  externalRouting     String?
+  externalSortCode    String?
+  externalBsb         String?
+  externalAddress     String?
+  processedById       String?
+  processedAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  senderUser    User          @relation("TransferSender", fields: [senderUserId], references: [id])
+  recipientUser User?         @relation("TransferRecipient", fields: [recipientUserId], references: [id])
+  fromAccount   Account?      @relation("TransferFromAccount", fields: [fromAccountId], references: [id])
+  toAccount     Account?      @relation("TransferToAccount", fields: [toAccountId], references: [id])
+  transactions  Transaction[]
+}
+
+model LoanApplication {
+  id                         String     @id @default(uuid())
+  userId                     String
+  amount                     Float
+  currency                   String     @default("USD")
+  duration                   Int
+  purpose                    String
+  interestRate               Float
+  processingFee              Float      @default(0)
+  status                     LoanStatus @default(PENDING)
+  employmentStatus           String?
+  monthlyIncome              Float?
+  idType                     String?
+  idDocumentPath             String?
+  photoPath                  String?
+  familyContactName          String?
+  familyContactRelationship  String?
+  familyContactPhone         String?
+  familyContactEmail         String?
+  friendContactName          String?
+  friendContactRelationship  String?
+  friendContactPhone         String?
+  friendContactEmail         String?
+  adminNotes                 String?
+  reviewedById               String?
+  reviewedAt                 DateTime?
+  createdAt                  DateTime   @default(now())
+  updatedAt                  DateTime   @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loan Loan?
+}
+
+model Loan {
+  id                String     @id @default(uuid())
+  userId            String
+  applicationId     String     @unique
+  principal         Float
+  currency          String     @default("USD")
+  interestRate      Float
+  processingFee     Float      @default(0)
+  duration          Int
+  monthlyPayment    Float
+  totalRepayment    Float
+  paidAmount        Float      @default(0)
+  remainingBalance  Float
+  status            LoanStatus @default(ACTIVE)
+  purpose           String?
+  disbursedAt       DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application  LoanApplication @relation(fields: [applicationId], references: [id])
+  repayments   LoanRepayment[]
+}
+
+model LoanRepayment {
+  id        String   @id @default(uuid())
+  loanId    String
+  amount    Float
+  reference String   @unique
+  notes     String?
+  createdAt DateTime @default(now())
+
+  loan Loan @relation(fields: [loanId], references: [id], onDelete: Cascade)
+}
+
+model CardRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  cardType  CardType
+  status    CardStatus @default(PENDING)
+  fee       Float    @default(0)
+  adminNotes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card Card?
+}
+
+model Card {
+  id           String     @id @default(uuid())
+  userId       String
+  requestId    String?    @unique
+  cardType     CardType
+  status       CardStatus @default(ACTIVE)
+  maskedNumber String
+  cardholder   String
+  expiryMonth  Int
+  expiryYear   Int
+  dailyLimit   Float?
+  monthlyLimit Float?
+  issuedAt     DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  request      CardRequest?      @relation(fields: [requestId], references: [id])
+  transactions CardTransaction[]
+}
+
+model CardTransaction {
+  id          String   @id @default(uuid())
+  cardId      String
+  accountId   String?
+  amount      Float
+  currency    String
+  merchant    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  card    Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  account Account? @relation(fields: [accountId], references: [id])
+}
+
+model SystemSettings {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  actorId       String?
+  action        String
+  targetType    String
+  targetId      String?
+  previousValue String?
+  newValue      String?
+  reason        String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      NotificationType
+  read      Boolean          @default(false)
+  relatedId String?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SupportTicket {
+  id        String         @id @default(uuid())
+  userId    String
+  subject   String
+  message   String
+  priority  TicketPriority @default(MEDIUM)
+  status    TicketStatus   @default(OPEN)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replies SupportReply[]
+}
+
+model SupportReply {
+  id        String   @id @default(uuid())
+  ticketId  String
+  message   String
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
