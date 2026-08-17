@@ -289,3 +289,768 @@ footer span{color:var(--gold)}
   .crypto{grid-template-columns:36px 1fr auto;grid-template-rows:auto auto}
   .spark{display:none}
 }
+
+/* ==========================================================================
+   NEXA MICROFINANCE BANK - REDESIGNED HOMEPAGE STYLING (DESKTOP & MOBILE)
+   ========================================================================== */
+
+.nexa-homepage {
+  background-color: #03091e;
+  color: #ffffff;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  font-family: 'DM Sans', 'Manrope', sans-serif;
+}
+
+/* Ambient Radial Glow Backgrounds */
+.glow-bg {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(100px);
+}
+.glow-1 {
+  width: 500px;
+  height: 500px;
+  top: -100px;
+  right: -50px;
+  background: radial-gradient(circle, rgba(29, 97, 242, 0.22) 0%, rgba(3, 9, 30, 0) 70%);
+}
+.glow-2 {
+  width: 450px;
+  height: 450px;
+  top: 300px;
+  left: -100px;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.15) 0%, rgba(3, 9, 30, 0) 70%);
+}
+.glow-3 {
+  width: 600px;
+  height: 600px;
+  bottom: 0;
+  right: 10%;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, rgba(3, 9, 30, 0) 70%);
+}
+
+/* --------------------------------------------------------------------------
+   NAVBAR (DESKTOP & MOBILE)
+   -------------------------------------------------------------------------- */
+.nexa-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(3, 9, 30, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nav-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  height: 76px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-logo-wrapper {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.nav-logo-wrapper .logo {
+  color: #ffffff;
+  font-size: 24px;
+}
+.desktop-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.desktop-nav-links a {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+.desktop-nav-links a:hover {
+  color: #ffffff;
+}
+.desktop-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.nav-signin-btn {
+  background: transparent;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.nav-signin-btn:hover {
+  color: #60a5fa;
+}
+.nav-open-btn {
+  background: #1d61f2;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 11px 22px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(29, 97, 242, 0.4);
+  transition: all 0.25 ease;
+}
+.nav-open-btn:hover {
+  background: #1a54d4;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(29, 97, 242, 0.55);
+}
+
+/* Mobile Nav Bar Controls */
+.mobile-hamburger-btn,
+.mobile-bell-btn {
+  display: none;
+  background: none;
+  color: #ffffff;
+  padding: 8px;
+}
+
+/* Mobile Drawer Overlay */
+.mobile-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-start;
+}
+.mobile-drawer-content {
+  width: 300px;
+  height: 100%;
+  background: #061334;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+  animation: slideRight 0.3s ease;
+}
+@keyframes slideRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+.mobile-drawer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: auto;
+}
+.mobile-drawer-links a {
+  color: #e2e8f0;
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+}
+.mobile-drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   HERO SECTION
+   -------------------------------------------------------------------------- */
+.nexa-main-content {
+  position: relative;
+  z-index: 10;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+.nexa-hero-section {
+  padding: 40px 0 60px;
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 56px;
+  align-items: center;
+}
+
+/* Hero Left Column */
+.reimagined-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #34d399;
+  margin-bottom: 24px;
+}
+.green-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #10b981;
+  animation: pulseDot 2s infinite;
+}
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.hero-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -1.5px;
+  color: #ffffff;
+  margin-bottom: 24px;
+}
+.title-orange {
+  color: #f97316;
+}
+
+.hero-lead-text {
+  font-size: 17px;
+  line-height: 1.65;
+  color: #94a3b8;
+  max-width: 520px;
+  margin-bottom: 36px;
+}
+
+/* Action Buttons */
+.hero-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.btn-primary-blue {
+  background: #1d61f2;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 6px 20px rgba(29, 97, 242, 0.45);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-primary-blue:hover {
+  background: #1852cf;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(29, 97, 242, 0.6);
+}
+.btn-primary-blue svg {
+  transition: transform 0.2s ease;
+}
+.btn-primary-blue:hover svg {
+  transform: translateX(4px);
+}
+
+.btn-secondary-dark {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 14px 32px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+.btn-secondary-dark:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Customer Trust Row */
+.customer-trust-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.avatar-stack {
+  display: flex;
+  align-items: center;
+}
+.avatar-stack img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #03091e;
+  margin-left: -10px;
+  object-fit: cover;
+}
+.avatar-stack img:first-child {
+  margin-left: 0;
+}
+.trust-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.trust-count {
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+.rating-stars {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #ffffff;
+}
+.stars-group {
+  color: #fbbf24;
+  letter-spacing: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   HERO RIGHT COLUMN - FLOATING NEXA ACCOUNT CARD
+   -------------------------------------------------------------------------- */
+.floating-account-card {
+  background: linear-gradient(145deg, rgba(16, 44, 102, 0.85) 0%, rgba(6, 21, 56, 0.95) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 24px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(1, 10, 32, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  animation: floatCard 6s ease-in-out infinite;
+}
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.card-dot-matrix {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.card-top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  position: relative;
+  z-index: 2;
+}
+.card-brand-logo .logo {
+  font-size: 22px;
+  color: #ffffff;
+}
+.mobile-card-title {
+  display: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+}
+.card-bell-icon {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+.card-bell-icon:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.05);
+}
+
+.card-balance-section {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 28px;
+}
+.balance-label {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+.balance-amount {
+  font-family: 'Manrope', sans-serif;
+  font-size: 44px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+.growth-indicator-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.14);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.card-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin-bottom: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.card-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+.card-action-btn {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.card-action-btn:hover {
+  color: #ffffff;
+  transform: translateY(-2px);
+}
+.action-icon-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+.card-action-btn:hover .action-icon-circle {
+  background: #1d61f2;
+  border-color: #1d61f2;
+  box-shadow: 0 4px 14px rgba(29, 97, 242, 0.4);
+}
+
+/* --------------------------------------------------------------------------
+   CRYPTO MARKETS TODAY SECTION
+   -------------------------------------------------------------------------- */
+.nexa-crypto-section {
+  margin-top: 40px;
+  margin-bottom: 48px;
+}
+.crypto-card-container {
+  background: rgba(8, 20, 48, 0.75);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 24px;
+  padding: 32px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+.crypto-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.crypto-section-header h2 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+}
+.view-all-link {
+  background: none;
+  color: #3b82f6;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s ease;
+}
+.view-all-link:hover {
+  color: #60a5fa;
+}
+
+.crypto-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.crypto-item-card {
+  background: rgba(15, 32, 70, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.crypto-item-card:hover {
+  background: rgba(22, 46, 98, 0.7);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.crypto-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.crypto-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 16px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.btc-badge { background: #f97316; }
+.eth-badge { background: #6366f1; }
+.usdt-badge { background: #10b981; }
+.sol-badge { background: linear-gradient(135deg, #a855f7, #06b6d4); }
+
+.crypto-info h4 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+.pair-code {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.crypto-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.price-num {
+  font-family: 'Manrope', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+}
+.change-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.change-badge.positive {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+.change-badge.neutral {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.crypto-chart-wrapper {
+  height: 46px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   FEATURE CARDS SECTION
+   -------------------------------------------------------------------------- */
+.nexa-features-section {
+  margin-bottom: 40px;
+}
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.feature-card {
+  background: rgba(8, 20, 48, 0.65);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 20px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.feature-card:hover {
+  background: rgba(15, 35, 82, 0.8);
+  border-color: rgba(59, 130, 246, 0.45);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 30px rgba(29, 97, 242, 0.25);
+}
+
+.feature-icon-wrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+}
+.icon-blue { background: rgba(29, 97, 242, 0.18); color: #3b82f6; border: 1px solid rgba(29, 97, 242, 0.3); }
+.icon-green { background: rgba(16, 185, 129, 0.18); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.icon-cyan { background: rgba(6, 182, 212, 0.18); color: #06b6d4; border: 1px solid rgba(6, 182, 212, 0.3); }
+.icon-purple { background: rgba(168, 85, 247, 0.18); color: #a855f7; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+.feature-card h3 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+.feature-card p {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   FOOTER
+   -------------------------------------------------------------------------- */
+.nexa-footer-bar {
+  text-align: center;
+  padding: 32px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS (TABLET & MOBILE MATCHING REFERENCE SPEC)
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .crypto-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .hero-title {
+    font-size: 48px;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktop-nav-links,
+  .desktop-nav-actions {
+    display: none;
+  }
+  .mobile-hamburger-btn,
+  .mobile-bell-btn {
+    display: block;
+  }
+  .desktop-logo-text {
+    display: none;
+  }
+  .mobile-card-title {
+    display: block;
+  }
+
+  .nexa-main-content {
+    padding: 20px 16px 60px;
+  }
+  .hero-title {
+    font-size: 38px;
+    letter-spacing: -0.5px;
+  }
+  .hero-lead-text {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+  .hero-actions-row {
+    flex-direction: column;
+    width: 100%;
+  }
+  .btn-primary-blue,
+  .btn-secondary-dark {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .floating-account-card {
+    padding: 24px 20px;
+  }
+  .balance-amount {
+    font-size: 32px;
+  }
+
+  .crypto-card-container {
+    padding: 20px 16px;
+  }
+  .crypto-grid {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding-bottom: 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .crypto-item-card {
+    min-width: 240px;
+    scroll-snap-align: start;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 34px;
+  }
+  .balance-amount {
+    font-size: 28px;
+  }
+}
