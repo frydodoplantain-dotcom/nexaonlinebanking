@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import authRoutes from './routes/auth.js';
 import customerRoutes from './routes/customer.js';
 import transferRoutes from './routes/transfers.js';
@@ -19,9 +20,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Set DATABASE_URL if not provided by Railway env vars.
-// __dirname = <root>/server/dist at runtime.
-// SQLite db lives at <root>/server/prisma/dev.db
+// ── DATABASE_URL ─────────────────────────────────────────────────────────────
+// __dirname at runtime = <root>/server/dist
+// SQLite db lives at   <root>/server/prisma/dev.db
 if (!process.env.DATABASE_URL) {
   const dbPath = path.resolve(__dirname, '../prisma/dev.db');
   process.env.DATABASE_URL = `file:${dbPath}`;
@@ -44,7 +45,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crypto', cryptoRoutes);
 
-// ── HEALTH CHECK ─────────────────────────────────────────────────────────────
+// ── HEALTH CHECK — responds immediately, no DB dependency ────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
@@ -64,9 +65,24 @@ app.get('*', (req, res, next) => {
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[NEXA] Server listening on 0.0.0.0:${PORT}`);
 
-  // Run async DB initialization AFTER server is bound and health check passes.
-  // Errors here are non-fatal — they only affect first-login seeding.
-  Promise.all([initDefaultSettings(), initAdminUser()])
-    .then(() => console.log('[NEXA] Database initialized.'))
-    .catch(err => console.error('[NEXA] DB init error (non-fatal):', err?.message ?? err));
+  // Use DIRECT path to prisma binary — avoids npx PATH lookup failures on Railway.
+  // __dirname = server/dist  →  ../../node_modules/.bin/prisma = root/node_modules/.bin/prisma
+  const prismaBin = path.resolve(__dirname, '../../node_modules/.bin/prisma');
+  const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
+
+  exec(
+    `"${prismaBin}" db push --schema="${schemaPath}" --accept-data-loss --skip-generate`,
+    { env: { ...process.env } },
+    (err, _stdout, stderr) => {
+      if (err) {
+        console.error('[NEXA] Schema push error:', stderr || err.message);
+      } else {
+        console.log('[NEXA] Database schema applied.');
+      }
+      // Init settings & admin AFTER schema exists — errors are non-fatal
+      Promise.all([initDefaultSettings(), initAdminUser()])
+        .then(() => console.log('[NEXA] Database initialized successfully.'))
+        .catch(e => console.error('[NEXA] DB init error (non-fatal):', e?.message ?? e));
+    }
+  );
 });
