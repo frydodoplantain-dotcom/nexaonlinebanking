@@ -4,7 +4,6 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
 import authRoutes from './routes/auth.js';
 import customerRoutes from './routes/customer.js';
 import transferRoutes from './routes/transfers.js';
@@ -20,10 +19,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// ── DATABASE_URL ────────────────────────────────────────────────────────────
-// __dirname at runtime = <deploy_root>/server/dist
-// SQLite db lives at    <deploy_root>/server/prisma/dev.db
-// => one level up from dist, then into prisma
+// Set DATABASE_URL if not provided by Railway env vars.
+// __dirname = <root>/server/dist at runtime.
+// SQLite db lives at <root>/server/prisma/dev.db
 if (!process.env.DATABASE_URL) {
   const dbPath = path.resolve(__dirname, '../prisma/dev.db');
   process.env.DATABASE_URL = `file:${dbPath}`;
@@ -46,7 +44,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crypto', cryptoRoutes);
 
-// ── HEALTH CHECK (responds immediately — required for Railway) ───────────────
+// ── HEALTH CHECK ─────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
@@ -66,23 +64,9 @@ app.get('*', (req, res, next) => {
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[NEXA] Server listening on 0.0.0.0:${PORT}`);
 
-  // Run DB schema push AFTER server is already accepting connections.
-  // This prevents Railway health-check timeouts caused by a slow synchronous push.
-  const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
-  exec(
-    `npx prisma db push --schema="${schemaPath}" --accept-data-loss --skip-generate`,
-    { env: { ...process.env } },
-    (err, stdout, stderr) => {
-      if (err) {
-        console.error('[NEXA] Schema push failed (non-fatal):', stderr || err.message);
-      } else {
-        console.log('[NEXA] Database schema applied.');
-      }
-
-      // Init default settings & admin user once schema is ready
-      Promise.all([initDefaultSettings(), initAdminUser()]).catch(e => {
-        console.error('[NEXA] Init error:', e);
-      });
-    }
-  );
+  // Run async DB initialization AFTER server is bound and health check passes.
+  // Errors here are non-fatal — they only affect first-login seeding.
+  Promise.all([initDefaultSettings(), initAdminUser()])
+    .then(() => console.log('[NEXA] Database initialized.'))
+    .catch(err => console.error('[NEXA] DB init error (non-fatal):', err?.message ?? err));
 });
