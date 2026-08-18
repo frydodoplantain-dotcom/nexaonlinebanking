@@ -13,27 +13,21 @@ import supportRoutes from './routes/support.js';
 import adminRoutes from './routes/admin.js';
 import cryptoRoutes from './routes/crypto.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { execSync } from 'child_process';
 import { initDefaultSettings, initAdminUser } from './services/settingsService.js';
+
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Set DATABASE_URL if not provided — Prisma resolves relative paths from schema file
+// dist/index.js -> server/dist/index.js, db at server/prisma/prisma/dev.db
 if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = `file:${path.resolve(__dirname, '../prisma/dev.db')}`;
+  const dbPath = path.resolve(__dirname, '../prisma/prisma/dev.db');
+  process.env.DATABASE_URL = `file:${dbPath}`;
+  console.log('[NEXA] DATABASE_URL auto-set to:', process.env.DATABASE_URL);
 }
 
-try {
-  const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
-  execSync(`npx prisma db push --schema="${schemaPath}" --accept-data-loss`, {
-    stdio: 'ignore',
-    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL }
-  });
-  console.log('Database schema synchronized.');
-} catch (err: any) {
-  console.warn('Database schema sync warning:', err?.message || err);
-}
 
 
 app.use(cors({
