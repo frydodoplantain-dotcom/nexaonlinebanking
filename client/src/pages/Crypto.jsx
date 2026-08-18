@@ -51,8 +51,8 @@ export default function Crypto() {
 
   const handleDepositSubmit = async (e) => {
     e.preventDefault();
-    if (!customerWallet?.configured && !activeAssetConfig) {
-      toast('Deposit address is not configured for this asset yet.');
+    if (!customerWallet?.configured || !activeAssetConfig) {
+      toast('Your personal wallet is not configured for this asset yet.');
       return;
     }
     if (!amount || Number(amount) <= 0) {
@@ -224,12 +224,12 @@ export default function Crypto() {
         <div className="modal-overlay" onClick={() => setShowDepositModal(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <h3>Deposit {activeAssetConfig.name} ({activeAssetConfig.symbol.toUpperCase()})</h3>
-            <p className="muted">Please send funds only on the <strong>{activeAssetConfig.network}</strong> network to the address below:</p>
+            <p className="muted">Please send funds only on the <strong>{customerWallet.network}</strong> network to your personal address below:</p>
             
             <div className="deposit-address-box" style={{ background: 'var(--bg-secondary, #1e293b)', padding: 12, borderRadius: 8, margin: '15px 0' }}>
-              <small className="muted">Official Deposit Address</small>
+              <small className="muted">Your personal assigned deposit address</small>
               <p className="mono" style={{ wordBreak: 'break-all', fontWeight: 'bold', marginTop: 4 }}>
-                {activeAssetConfig.depositAddress}
+                {customerWallet.depositAddress}
               </p>
               {activeAssetConfig.instructions && (
                 <small className="text-warning" style={{ display: 'block', marginTop: 8 }}>

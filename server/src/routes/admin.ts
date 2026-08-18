@@ -179,7 +179,7 @@ router.get('/crypto/deposits', async (req, res, next) => {
 
     const deposits = await prisma.cryptoDeposit.findMany({
       where,
-      include: { user: { include: { profile: true } }, asset: true },
+      include: { user: { include: { profile: true } }, asset: true, wallet: true },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -192,20 +192,24 @@ router.get('/crypto/deposits', async (req, res, next) => {
 router.post('/crypto/deposits/:id/review', async (req, res, next) => {
   try {
     const { status, adminNotes } = z.object({
-      status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED']),
+      status: z.enum(['APPROVED', 'REJECTED', 'HOLD']),
       adminNotes: z.string().optional(),
     }).parse(req.body);
 
-    if (['REJECTED', 'SUSPENDED'].includes(status) && !adminNotes) {
-      return res.status(400).json({ error: 'Reason (adminNotes) is required for rejection/suspension' });
+    if (['REJECTED', 'HOLD'].includes(status) && !adminNotes) {
+      return res.status(400).json({ error: 'Reason (adminNotes) is required for rejection or hold' });
     }
 
     const deposit = await prisma.cryptoDeposit.findUnique({
       where: { id: req.params.id },
-      include: { asset: true, user: true },
+      include: { asset: true, user: true, wallet: true },
     });
 
     if (!deposit) return res.status(404).json({ error: 'Crypto deposit request not found' });
+
+    if (!deposit.walletId || !deposit.wallet || deposit.wallet.userId !== deposit.userId) {
+      return res.status(409).json({ error: 'Deposit is not linked to a valid customer wallet and cannot be approved.' });
+    }
 
     if (deposit.status === 'APPROVED') {
       return res.status(400).json({ error: 'Deposit request has already been approved' });

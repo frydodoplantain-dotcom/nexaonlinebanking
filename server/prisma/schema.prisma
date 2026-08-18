@@ -571,6 +571,7 @@ model CryptoDeposit {
   id         String      @id @default(uuid())
   userId     String
   assetId    String
+  walletId   String?
   amount     Float
   txHash     String?
   status     String      @default("PENDING")
@@ -578,8 +579,9 @@ model CryptoDeposit {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  asset CryptoAsset @relation(fields: [assetId], references: [id])
+  user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset  CryptoAsset           @relation(fields: [assetId], references: [id])
+  wallet CustomerCryptoWallet? @relation(fields: [walletId], references: [id], onDelete: SetNull)
 }
 
 model CustomerCryptoWallet {
@@ -592,7 +594,8 @@ model CustomerCryptoWallet {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cryptoDeposits CryptoDeposit[]
 
   @@unique([userId, symbol])
 }

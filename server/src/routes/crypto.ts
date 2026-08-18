@@ -123,20 +123,9 @@ router.get('/my-wallet/:symbol', requireAuth, requireActiveCustomer, async (req,
       });
     }
 
-    // Check if global fallback exists
-    const globalAsset = await prisma.cryptoAsset.findUnique({ where: { symbol } });
-    if (globalAsset && globalAsset.status === 'ACTIVE') {
-      return res.json({
-        configured: true,
-        depositAddress: globalAsset.depositAddress,
-        network: globalAsset.network,
-        symbol: globalAsset.symbol,
-        instructions: globalAsset.instructions,
-        isCustomerSpecific: false,
-      });
-    }
-
-    res.json({ configured: false });
+    // General asset configuration is not a customer wallet. Never expose a shared
+    // address from this customer endpoint.
+    res.json({ configured: false, symbol, reason: 'CUSTOMER_WALLET_NOT_CONFIGURED' });
   } catch (e) {
     next(e);
   }
@@ -168,10 +157,18 @@ router.post('/deposit-request', requireAuth, requireActiveCustomer, async (req, 
       return res.status(400).json({ error: 'Selected asset is not available for deposit' });
     }
 
+    const wallet = await prisma.customerCryptoWallet.findUnique({
+      where: { userId_symbol: { userId: req.auth!.userId, symbol: asset.symbol.toLowerCase() } },
+    });
+    if (!wallet || wallet.status !== 'ACTIVE') {
+      return res.status(409).json({ error: 'Your personal wallet is not configured or active for this asset.' });
+    }
+
     const deposit = await prisma.cryptoDeposit.create({
       data: {
         userId: req.auth!.userId,
         assetId: data.assetId,
+        walletId: wallet.id,
         amount: data.amount,
         txHash: data.txHash,
         status: 'PENDING',

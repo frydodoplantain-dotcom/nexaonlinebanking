@@ -10,6 +10,7 @@ import { api } from '../api/client';
 export default function BankLayout() {
   const { user, logout } = useAuth();
   const [mobile, setMobile] = useState(false);
+  const [mobileMore, setMobileMore] = useState(false);
   const [unread, setUnread] = useState(0);
   const loc = useLocation();
   const go = useNavigate();
@@ -93,14 +94,33 @@ export default function BankLayout() {
           ['accounts', I.WalletCards, 'Accounts'],
           ['transfers', I.ArrowLeftRight, 'Transfer', true],
           ['crypto', I.Bitcoin, 'Crypto'],
-          ['settings', I.LayoutGrid, 'More'],
+          ['more', I.LayoutGrid, 'More'],
         ].map(([r, Icon, n, fab]) => (
-          <button key={r} className={(route === r ? 'active ' : '') + (fab ? 'fab' : '')} onClick={() => go('/app/' + r)}>
+          <button key={r} className={((r === 'more' ? mobileMore : route === r) ? 'active ' : '') + (fab ? 'fab' : '')} onClick={() => r === 'more' ? setMobileMore(true) : go('/app/' + r)}>
             <Icon size={fab ? 22 : 20} />
             {!fab && <small>{n}</small>}
           </button>
         ))}
       </nav>
+      {mobileMore && (
+        <div className="mobile-more-overlay" onClick={() => setMobileMore(false)}>
+          <section className="mobile-more-sheet" onClick={(e) => e.stopPropagation()} aria-label="More banking features">
+            <div className="mobile-more-heading"><div><h3>More services</h3><p>All banking features are available on mobile.</p></div><button onClick={() => setMobileMore(false)} aria-label="Close menu"><I.X /></button></div>
+            <div className="mobile-more-grid">
+              {[
+                ['transactions', I.ReceiptText, 'Transactions'], ['receive', I.ArrowDownToLine, 'Receive'],
+                ['deposit', I.Landmark, 'Deposit'], ['withdraw', I.ArrowUpFromLine, 'Withdraw'],
+                ['cards', I.CreditCard, 'Cards'], ['loans', I.Landmark, 'Loans'],
+                ['notifications', I.Bell, 'Notifications'], ['support', I.MessageCircle, 'Support'],
+                ['settings', I.Settings, 'Profile & settings'],
+              ].map(([path, Icon, label]) => (
+                <button key={path} onClick={() => { go('/app/' + path); setMobileMore(false); }}><Icon /><span>{label}</span></button>
+              ))}
+            </div>
+            <button className="mobile-more-logout" onClick={signOut}><I.LogOut /> Log out</button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

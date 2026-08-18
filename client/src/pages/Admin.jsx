@@ -300,7 +300,7 @@ function CryptoAdminTab({ toast }) {
     try {
       if (selectedAsset?.id) {
         await api.admin.updateCryptoAsset(selectedAsset.id, assetForm);
-        toast('Crypto asset wallet configuration updated.');
+        toast('Crypto asset market configuration updated.');
       } else {
         await api.admin.createCryptoAsset(assetForm);
         toast('Crypto asset created.');
@@ -315,7 +315,7 @@ function CryptoAdminTab({ toast }) {
 
   const handleReviewDeposit = async (id, status) => {
     let adminNotes;
-    if (['REJECTED', 'SUSPENDED'].includes(status)) {
+    if (['REJECTED', 'HOLD'].includes(status)) {
       adminNotes = prompt(`Please enter a reason for ${status.toLowerCase()}ing this crypto deposit:`);
       if (!adminNotes) return;
     }
@@ -332,15 +332,15 @@ function CryptoAdminTab({ toast }) {
     <>
       {/* Wallet Configurations Section */}
       <section className="panel" style={{ marginBottom: 20 }}>
-        <h3>Configure Crypto Asset Deposit Addresses</h3>
-        <p className="muted">Set up official deposit addresses and networks for supported cryptocurrencies.</p>
+        <h3>Crypto Asset Configuration</h3>
+        <p className="muted">This is global market and network metadata only. It never assigns a wallet address to a customer.</p>
 
         <form onSubmit={handleSaveAsset} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 14 }}>
           <Field label="Asset Name (e.g. Bitcoin)" value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} required />
           <Field label="Symbol (e.g. btc)" value={assetForm.symbol} onChange={(e) => setAssetForm({ ...assetForm, symbol: e.target.value })} required />
           <Field label="Network (e.g. Bitcoin / ERC20)" value={assetForm.network} onChange={(e) => setAssetForm({ ...assetForm, network: e.target.value })} required />
           <div style={{ gridColumn: '1 / -1' }}>
-            <Field label="Deposit Wallet Address" value={assetForm.depositAddress} onChange={(e) => setAssetForm({ ...assetForm, depositAddress: e.target.value })} required />
+            <Field label="Legacy asset configuration reference" value={assetForm.depositAddress} onChange={(e) => setAssetForm({ ...assetForm, depositAddress: e.target.value })} required />
           </div>
           <Field label="Instructions (Optional)" value={assetForm.instructions} onChange={(e) => setAssetForm({ ...assetForm, instructions: e.target.value })} />
           <Field label="Status" value={assetForm.status} onChange={(e) => setAssetForm({ ...assetForm, status: e.target.value })} select>
@@ -360,7 +360,7 @@ function CryptoAdminTab({ toast }) {
                 <strong>{a.name} ({a.symbol.toUpperCase()})</strong>
                 <span className={`badge ${a.status === 'ACTIVE' ? 'status-green' : 'status-gray'}`} style={{ marginLeft: 8 }}>{a.status}</span>
                 <p style={{ fontSize: '0.8rem', margin: '4px 0', color: 'var(--gold)' }}>Network: {a.network}</p>
-                <small className="mono" style={{ wordBreak: 'break-all', display: 'block', fontSize: '0.75rem' }}>{a.depositAddress}</small>
+                 <small className="muted" style={{ display: 'block', fontSize: '0.75rem' }}>Customer wallet addresses are configured per customer profile.</small>
                 <Button variant="light" style={{ marginTop: 8 }} onClick={() => { setSelectedAsset(a); setAssetForm(a); }}>Edit Config</Button>
               </div>
             ))}
@@ -397,7 +397,7 @@ function CryptoAdminTab({ toast }) {
               {d.status === 'PENDING' && (
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <Button onClick={() => handleReviewDeposit(d.id, 'APPROVED')}>Approve & Credit Balance</Button>
-                  <Button variant="light" onClick={() => handleReviewDeposit(d.id, 'SUSPENDED')}>Suspend / Hold</Button>
+                   <Button variant="light" onClick={() => handleReviewDeposit(d.id, 'HOLD')}>Place on hold</Button>
                   <Button variant="light" onClick={() => handleReviewDeposit(d.id, 'REJECTED')}>Reject</Button>
                 </div>
               )}
