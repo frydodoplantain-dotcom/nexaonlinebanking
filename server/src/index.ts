@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import authRoutes from './routes/auth.js';
 import customerRoutes from './routes/customer.js';
 import transferRoutes from './routes/transfers.js';
@@ -14,43 +15,28 @@ import adminRoutes from './routes/admin.js';
 import cryptoRoutes from './routes/crypto.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initDefaultSettings, initAdminUser } from './services/settingsService.js';
-import { execSync } from 'child_process';
-
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// __dirname = server/dist at runtime
-// SQLite file lives at server/prisma/dev.db  → one level up from dist, then into prisma
+// ── DATABASE_URL ────────────────────────────────────────────────────────────
+// __dirname at runtime = <deploy_root>/server/dist
+// SQLite db lives at    <deploy_root>/server/prisma/dev.db
+// => one level up from dist, then into prisma
 if (!process.env.DATABASE_URL) {
   const dbPath = path.resolve(__dirname, '../prisma/dev.db');
   process.env.DATABASE_URL = `file:${dbPath}`;
-  console.log('[NEXA] DATABASE_URL auto-set to:', process.env.DATABASE_URL);
+  console.log('[NEXA] DATABASE_URL set to:', process.env.DATABASE_URL);
 }
 
-// Push schema at startup so DB file + tables always exist (safe on SQLite)
-try {
-  const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
-  execSync(
-    `npx prisma db push --schema="${schemaPath}" --accept-data-loss --skip-generate`,
-    { stdio: 'pipe', env: { ...process.env } }
-  );
-  console.log('[NEXA] Database schema applied.');
-} catch (e: any) {
-  console.error('[NEXA] Schema push failed (non-fatal):', e?.message ?? e);
-}
-
-
-
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
+// ── MIDDLEWARE ───────────────────────────────────────────────────────────────
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// ── API ROUTES ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/transfers', transferRoutes);
@@ -60,12 +46,13 @@ app.use('/api/support', supportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crypto', cryptoRoutes);
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+// ── HEALTH CHECK (responds immediately — required for Railway) ───────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use(errorHandler);
 
-// Serve client static files in production
+// ── SERVE REACT SPA ──────────────────────────────────────────────────────────
 const clientDistPath = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDistPath));
 app.get('*', (req, res, next) => {
@@ -75,12 +62,27 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
-const server = app.listen(Number(PORT), '0.0.0.0', () => {
-  console.log(`NEXA Bank production server listening on 0.0.0.0:${PORT}`);
+// ── START SERVER ─────────────────────────────────────────────────────────────
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`[NEXA] Server listening on 0.0.0.0:${PORT}`);
+
+  // Run DB schema push AFTER server is already accepting connections.
+  // This prevents Railway health-check timeouts caused by a slow synchronous push.
+  const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
+  exec(
+    `npx prisma db push --schema="${schemaPath}" --accept-data-loss --skip-generate`,
+    { env: { ...process.env } },
+    (err, stdout, stderr) => {
+      if (err) {
+        console.error('[NEXA] Schema push failed (non-fatal):', stderr || err.message);
+      } else {
+        console.log('[NEXA] Database schema applied.');
+      }
+
+      // Init default settings & admin user once schema is ready
+      Promise.all([initDefaultSettings(), initAdminUser()]).catch(e => {
+        console.error('[NEXA] Init error:', e);
+      });
+    }
+  );
 });
-
-Promise.all([initDefaultSettings(), initAdminUser()]).catch(err => {
-  console.error('Async initialization error:', err);
-});
-
-
