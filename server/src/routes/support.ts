@@ -23,12 +23,13 @@ router.post('/', requireAuth, requireActiveCustomer, async (req, res, next) => {
   try {
     const data = z.object({
       subject: z.string().min(1),
+      category: z.string().optional().default('General enquiry'),
       message: z.string().min(1),
       priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
     }).parse(req.body);
 
     const ticket = await prisma.supportTicket.create({ data: { ...data, userId: req.auth!.userId } });
-    await notifyAdmins('New support ticket', data.subject, 'SUPPORT', ticket.id);
+    await notifyAdmins('New support ticket', `${data.category}: ${data.subject}`, 'SUPPORT', ticket.id);
     res.status(201).json(ticket);
   } catch (e) {
     next(e);

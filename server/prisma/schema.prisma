@@ -25,6 +25,7 @@ enum AccountType {
   CHECKING
   SAVINGS
   FIXED_DEPOSIT
+  CRYPTO
 }
 
 enum AccountStatus {
@@ -78,6 +79,9 @@ enum TransactionStatus {
   PENDING
   FAILED
   CANCELLED
+  REJECTED
+  SUSPENDED
+  REVERSED
 }
 
 enum TransferType {
@@ -94,6 +98,8 @@ enum TransferStatus {
   COMPLETED
   REJECTED
   CANCELLED
+  SUSPENDED
+  REVERSED
 }
 
 enum LoanStatus {
@@ -174,6 +180,7 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   ledgerEntriesCreated LedgerEntry[]        @relation("LedgerCreator")
   fixedDeposits        FixedDeposit[]
+  cryptoDeposits       CryptoDeposit[]
 }
 
 model UserProfile {
@@ -525,6 +532,7 @@ model SupportTicket {
   id        String         @id @default(uuid())
   userId    String
   subject   String
+  category  String?        @default("General enquiry")
   message   String
   priority  TicketPriority @default(MEDIUM)
   status    TicketStatus   @default(OPEN)
@@ -543,4 +551,32 @@ model SupportReply {
   createdAt DateTime @default(now())
 
   ticket SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model CryptoAsset {
+  id             String          @id @default(uuid())
+  name           String
+  symbol         String          @unique
+  network        String
+  depositAddress String
+  status         String          @default("ACTIVE")
+  instructions   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deposits       CryptoDeposit[]
+}
+
+model CryptoDeposit {
+  id         String      @id @default(uuid())
+  userId     String
+  assetId    String
+  amount     Float
+  txHash     String?
+  status     String      @default("PENDING")
+  adminNotes String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset CryptoAsset @relation(fields: [assetId], references: [id])
 }

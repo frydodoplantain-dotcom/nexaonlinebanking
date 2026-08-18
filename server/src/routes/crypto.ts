@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import { z } from 'zod';
+import { requireAuth, requireActiveCustomer } from '../middleware/auth.js';
+import { prisma } from '../lib/prisma.js';
+import { notifyAdmins } from '../services/notificationService.js';
 
 const router = Router();
 let cache: { data: unknown; ts: number } | null = null;
@@ -71,6 +75,68 @@ router.get('/market', async (_req, res) => {
     return res.json(data);
   } catch (e) {
     return res.json(FALLBACK_CRYPTO_MARKET);
+  }
+});
+
+router.get('/assets', async (_req, res, next) => {
+  try {
+    const assets = await prisma.cryptoAsset.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: { symbol: 'asc' },
+    });
+    res.json(assets);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/deposits', requireAuth, requireActiveCustomer, async (req, res, next) => {
+  try {
+    const deposits = await prisma.cryptoDeposit.findMany({
+      where: { userId: req.auth!.userId },
+      include: { asset: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(deposits);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/deposit-request', requireAuth, requireActiveCustomer, async (req, res, next) => {
+  try {
+    const data = z.object({
+      assetId: z.string(),
+      amount: z.number().positive(),
+      txHash: z.string().optional(),
+    }).parse(req.body);
+
+    const asset = await prisma.cryptoAsset.findUnique({ where: { id: data.assetId } });
+    if (!asset || asset.status !== 'ACTIVE') {
+      return res.status(400).json({ error: 'Selected asset is not available for deposit' });
+    }
+
+    const deposit = await prisma.cryptoDeposit.create({
+      data: {
+        userId: req.auth!.userId,
+        assetId: data.assetId,
+        amount: data.amount,
+        txHash: data.txHash,
+        status: 'PENDING',
+      },
+      include: { asset: true },
+    });
+
+    await notifyAdmins(
+      'New Crypto Deposit Request',
+      `Customer submitted deposit of ${data.amount} ${asset.symbol.toUpperCase()}`,
+      'SYSTEM',
+      deposit.id
+    );
+
+    res.status(201).json(deposit);
+  } catch (e) {
+    next(e);
   }
 });
 

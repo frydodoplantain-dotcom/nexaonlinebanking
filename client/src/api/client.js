@@ -102,10 +102,19 @@ export const api = {
 
   crypto: {
     market: () => request('/crypto/market'),
+    assets: () => request('/crypto/assets'),
+    depositRequest: (data) => request('/crypto/deposit-request', { method: 'POST', body: JSON.stringify(data) }),
+    deposits: () => request('/crypto/deposits'),
   },
 
   admin: {
     overview: () => request('/admin/overview'),
+    pendingActions: () => request('/admin/pending-actions'),
+    cryptoAssets: () => request('/admin/crypto/assets'),
+    createCryptoAsset: (data) => request('/admin/crypto/assets', { method: 'POST', body: JSON.stringify(data) }),
+    updateCryptoAsset: (id, data) => request(`/admin/crypto/assets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    cryptoDeposits: (status) => request(`/admin/crypto/deposits?status=${status || 'ALL'}`),
+    reviewCryptoDeposit: (id, data) => request(`/admin/crypto/deposits/${id}/review`, { method: 'POST', body: JSON.stringify(data) }),
     applications: (params) => request(`/admin/applications?${new URLSearchParams(params)}`),
     approveApplication: (id) => request(`/admin/applications/${id}/approve`, { method: 'POST' }),
     rejectApplication: (id, reason) => request(`/admin/applications/${id}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }),

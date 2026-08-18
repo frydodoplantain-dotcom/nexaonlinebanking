@@ -11,7 +11,7 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
-const TABS = ['Overview', 'Pending approvals', 'KYC Verification', 'Users', 'Create customer', 'Accounts', 'Transactions', 'Transfers', 'Loans', 'Cards', 'Reports', 'Audit logs', 'Notifications', 'Support', 'Settings'];
+const TABS = ['Overview', 'Pending approvals', 'External Transfers', 'Crypto Management', 'KYC Verification', 'Users', 'Create customer', 'Accounts', 'Transactions', 'Transfers', 'Loans', 'Cards', 'Reports', 'Audit logs', 'Notifications', 'Support', 'Settings'];
 
 export default function Admin() {
   const [tab, setTab] = useState('Overview');
@@ -39,8 +39,10 @@ export default function Admin() {
           <div><p>Administration</p><h1>{tab}</h1></div>
           <Button onClick={() => setTab('Create customer')}><I.Plus /> Create customer</Button>
         </header>
-        {tab === 'Overview' && overview && <Overview stats={overview} />}
+        {tab === 'Overview' && overview && <Overview stats={overview} setTab={setTab} toast={toast} />}
         {tab === 'Pending approvals' && <Approvals toast={toast} />}
+        {tab === 'External Transfers' && <ExternalTransfersReview toast={toast} />}
+        {tab === 'Crypto Management' && <CryptoAdminTab toast={toast} />}
         {tab === 'KYC Verification' && <KycTab toast={toast} />}
         {tab === 'Users' && <Users toast={toast} />}
         {tab === 'Create customer' && <CreateCustomer toast={toast} onDone={() => setTab('Users')} />}
@@ -59,7 +61,13 @@ export default function Admin() {
   );
 }
 
-function Overview({ stats }) {
+function Overview({ stats, setTab, toast }) {
+  const [pendingCounts, setPendingCounts] = useState(null);
+
+  useEffect(() => {
+    api.admin.pendingActions().then(setPendingCounts).catch(() => {});
+  }, []);
+
   const cards = [
     ['Total customers', stats.totalCustomers, I.Users],
     ['Pending applications', stats.pendingApplications, I.Clock3],
@@ -74,8 +82,53 @@ function Overview({ stats }) {
     ['Cards', stats.totalCards, I.CreditCard],
   ];
   const max = Math.max(1, ...(stats.chartData || []).map((x) => Number(x.count)));
+
   return (
     <>
+      {/* Pending Actions Center */}
+      {pendingCounts && (
+        <section className="panel" style={{ marginBottom: 20, borderColor: 'var(--brand-accent, #3b82f6)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <I.AlertCircle color="#f59e0b" /> Pending-Action Center ({pendingCounts.totalPending})
+            </h3>
+            <small className="muted">Live items requiring admin review</small>
+          </div>
+          <div className="pending-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+            <div className="pending-card clickable-row" onClick={() => setTab('External Transfers')} style={{ padding: 12, borderRadius: 8, background: '#132247', cursor: 'pointer' }}>
+              <small className="muted">External Transfers</small>
+              <h2 style={{ margin: '4px 0', color: pendingCounts.pendingTransfers > 0 ? '#f59e0b' : 'inherit' }}>{pendingCounts.pendingTransfers}</h2>
+              <small style={{ color: 'var(--brand-accent)' }}>Review transfers →</small>
+            </div>
+            <div className="pending-card clickable-row" onClick={() => setTab('Crypto Management')} style={{ padding: 12, borderRadius: 8, background: '#132247', cursor: 'pointer' }}>
+              <small className="muted">Crypto Deposits</small>
+              <h2 style={{ margin: '4px 0', color: pendingCounts.pendingCryptoDeposits > 0 ? '#f59e0b' : 'inherit' }}>{pendingCounts.pendingCryptoDeposits}</h2>
+              <small style={{ color: 'var(--brand-accent)' }}>Review deposits →</small>
+            </div>
+            <div className="pending-card clickable-row" onClick={() => setTab('Pending approvals')} style={{ padding: 12, borderRadius: 8, background: '#132247', cursor: 'pointer' }}>
+              <small className="muted">Account Apps</small>
+              <h2 style={{ margin: '4px 0', color: pendingCounts.pendingApplications > 0 ? '#f59e0b' : 'inherit' }}>{pendingCounts.pendingApplications}</h2>
+              <small style={{ color: 'var(--brand-accent)' }}>Review applications →</small>
+            </div>
+            <div className="pending-card clickable-row" onClick={() => setTab('Loans')} style={{ padding: 12, borderRadius: 8, background: '#132247', cursor: 'pointer' }}>
+              <small className="muted">Loan Apps</small>
+              <h2 style={{ margin: '4px 0', color: pendingCounts.pendingLoans > 0 ? '#f59e0b' : 'inherit' }}>{pendingCounts.pendingLoans}</h2>
+              <small style={{ color: 'var(--brand-accent)' }}>Review loans →</small>
+            </div>
+            <div className="pending-card clickable-row" onClick={() => setTab('Support')} style={{ padding: 12, borderRadius: 8, background: '#132247', cursor: 'pointer' }}>
+              <small className="muted">Support Conversations</small>
+              <h2 style={{ margin: '4px 0', color: pendingCounts.pendingSupportTickets > 0 ? '#f59e0b' : 'inherit' }}>{pendingCounts.pendingSupportTickets}</h2>
+              <small style={{ color: 'var(--brand-accent)' }}>Open inbox →</small>
+            </div>
+            <div className="pending-card clickable-row" onClick={() => setTab('KYC Verification')} style={{ padding: 12, borderRadius: 8, background: '#132247', cursor: 'pointer' }}>
+              <small className="muted">KYC Documents</small>
+              <h2 style={{ margin: '4px 0', color: pendingCounts.pendingKyc > 0 ? '#f59e0b' : 'inherit' }}>{pendingCounts.pendingKyc}</h2>
+              <small style={{ color: 'var(--brand-accent)' }}>Verify KYC →</small>
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="stat-grid">
         {cards.map(([a, b, Icon]) => (
           <article key={a}><span><Icon /></span><p>{a}</p><h2>{typeof b === 'number' && a.includes('balance') ? money(b) : b}</h2><small>Live data</small></article>
@@ -88,6 +141,246 @@ function Overview({ stats }) {
             ? <p className="muted">No activity yet.</p>
             : (stats.chartData || []).map((x) => <i key={x.month} title={x.month} style={{ height: (Number(x.count) / max) * 100 + '%' }} />)}
         </div>
+      </section>
+    </>
+  );
+}
+
+function ExternalTransfersReview({ toast }) {
+  const [data, setData] = useState({ items: [] });
+  const [filterStatus, setFilterStatus] = useState('PENDING');
+
+  const load = () => {
+    api.admin.transfers({ status: filterStatus, type: 'EXTERNAL' })
+      .then(setData)
+      .catch((e) => toast(e.message));
+  };
+
+  useEffect(() => {
+    load();
+  }, [filterStatus]);
+
+  const handleUpdateStatus = async (id, status) => {
+    let adminNotes;
+    if (['REJECTED', 'SUSPENDED', 'REVERSED'].includes(status)) {
+      adminNotes = prompt(`Please enter a mandatory reason for setting transfer to ${status}:`);
+      if (!adminNotes) {
+        toast('Action cancelled: Reason is required.');
+        return;
+      }
+    }
+
+    try {
+      await api.admin.updateTransferStatus(id, { status, adminNotes });
+      toast(`Transfer status updated to ${status}.`);
+      load();
+    } catch (e) {
+      toast(e.message);
+    }
+  };
+
+  return (
+    <section className="panel">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3>External Bank Transfer Reviews</h3>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <option value="ALL">All External Transfers</option>
+          <option value="PENDING">Pending Review</option>
+          <option value="UNDER_REVIEW">Under Review</option>
+          <option value="APPROVED">Approved / Processing</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="SUSPENDED">Suspended / Held</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="REVERSED">Reversed</option>
+        </select>
+      </div>
+
+      {data.items.length === 0 ? (
+        <p className="muted">No external transfers found for this filter.</p>
+      ) : (
+        data.items.map((t) => {
+          const sender = t.senderUser?.profile;
+          return (
+            <div key={t.id} className="card-box" style={{ marginBottom: 14, padding: 14, background: '#132247' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <strong>Transfer Ref: {t.reference}</strong>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Submitted by: {formatName(sender)} ({t.senderUser?.email}) · Date: {new Date(t.createdAt).toLocaleString()}
+                  </div>
+                </div>
+                <Status>{t.status}</Status>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, margin: '12px 0', padding: 10, background: '#0a142f', borderRadius: 6 }}>
+                <div><strong>Amount:</strong> <span style={{ color: 'var(--gold)' }}>{money(t.amount, t.currency)}</span> (+{money(t.fee, t.currency)} Fee)</div>
+                <div><strong>Destination Bank:</strong> {t.externalBankName || 'N/A'} ({t.externalCountry})</div>
+                <div><strong>Recipient Name:</strong> {t.externalAccountName}</div>
+                <div><strong>Recipient Account:</strong> {t.externalAccountNum}</div>
+                {t.externalRouting && <div><strong>Routing / Sort:</strong> {t.externalRouting || t.externalSortCode}</div>}
+                {t.externalSwift && <div><strong>SWIFT / BIC:</strong> {t.externalSwift}</div>}
+              </div>
+
+              {t.purpose && <p style={{ fontSize: '0.85rem', margin: '4px 0' }}><strong>Purpose:</strong> {t.purpose}</p>}
+              {t.adminNotes && <p style={{ fontSize: '0.85rem', color: '#f59e0b', margin: '4px 0' }}><strong>Reason / Note:</strong> {t.adminNotes}</p>}
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {t.status === 'PENDING' && (
+                  <Button variant="light" onClick={() => handleUpdateStatus(t.id, 'UNDER_REVIEW')}>Mark Under Review</Button>
+                )}
+                {['PENDING', 'UNDER_REVIEW'].includes(t.status) && (
+                  <Button onClick={() => handleUpdateStatus(t.id, 'APPROVED')}>Approve Transfer</Button>
+                )}
+                {['PENDING', 'UNDER_REVIEW', 'APPROVED'].includes(t.status) && (
+                  <Button variant="light" onClick={() => handleUpdateStatus(t.id, 'SUSPENDED')}>Suspend / Hold</Button>
+                )}
+                {['PENDING', 'UNDER_REVIEW', 'APPROVED'].includes(t.status) && (
+                  <Button variant="light" onClick={() => handleUpdateStatus(t.id, 'REJECTED')}>Reject & Refund</Button>
+                )}
+                {t.status === 'COMPLETED' && (
+                  <Button variant="light" onClick={() => handleUpdateStatus(t.id, 'REVERSED')}>Reverse Financial Action</Button>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </section>
+  );
+}
+
+function CryptoAdminTab({ toast }) {
+  const [assets, setAssets] = useState([]);
+  const [deposits, setDeposits] = useState([]);
+  const [selectedAsset, setSelectedAsset] = useState(null);
+
+  const [assetForm, setAssetForm] = useState({
+    name: '',
+    symbol: '',
+    network: '',
+    depositAddress: '',
+    status: 'ACTIVE',
+    instructions: '',
+  });
+
+  const load = () => {
+    api.admin.cryptoAssets().then(setAssets).catch((e) => toast(e.message));
+    api.admin.cryptoDeposits('ALL').then(setDeposits).catch((e) => toast(e.message));
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleSaveAsset = async (e) => {
+    e.preventDefault();
+    try {
+      if (selectedAsset?.id) {
+        await api.admin.updateCryptoAsset(selectedAsset.id, assetForm);
+        toast('Crypto asset wallet configuration updated.');
+      } else {
+        await api.admin.createCryptoAsset(assetForm);
+        toast('Crypto asset created.');
+      }
+      setAssetForm({ name: '', symbol: '', network: '', depositAddress: '', status: 'ACTIVE', instructions: '' });
+      setSelectedAsset(null);
+      load();
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  const handleReviewDeposit = async (id, status) => {
+    let adminNotes;
+    if (['REJECTED', 'SUSPENDED'].includes(status)) {
+      adminNotes = prompt(`Please enter a reason for ${status.toLowerCase()}ing this crypto deposit:`);
+      if (!adminNotes) return;
+    }
+    try {
+      await api.admin.reviewCryptoDeposit(id, { status, adminNotes });
+      toast(`Crypto deposit ${status.toLowerCase()}.`);
+      load();
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  return (
+    <>
+      {/* Wallet Configurations Section */}
+      <section className="panel" style={{ marginBottom: 20 }}>
+        <h3>Configure Crypto Asset Deposit Addresses</h3>
+        <p className="muted">Set up official deposit addresses and networks for supported cryptocurrencies.</p>
+
+        <form onSubmit={handleSaveAsset} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginTop: 14 }}>
+          <Field label="Asset Name (e.g. Bitcoin)" value={assetForm.name} onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })} required />
+          <Field label="Symbol (e.g. btc)" value={assetForm.symbol} onChange={(e) => setAssetForm({ ...assetForm, symbol: e.target.value })} required />
+          <Field label="Network (e.g. Bitcoin / ERC20)" value={assetForm.network} onChange={(e) => setAssetForm({ ...assetForm, network: e.target.value })} required />
+          <div style={{ gridColumn: '1 / -1' }}>
+            <Field label="Deposit Wallet Address" value={assetForm.depositAddress} onChange={(e) => setAssetForm({ ...assetForm, depositAddress: e.target.value })} required />
+          </div>
+          <Field label="Instructions (Optional)" value={assetForm.instructions} onChange={(e) => setAssetForm({ ...assetForm, instructions: e.target.value })} />
+          <Field label="Status" value={assetForm.status} onChange={(e) => setAssetForm({ ...assetForm, status: e.target.value })} select>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </Field>
+          <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+            <Button type="submit">{selectedAsset ? 'Update Asset' : 'Save Configured Asset'}</Button>
+          </div>
+        </form>
+
+        <div style={{ marginTop: 20 }}>
+          <h4>Active Configured Assets</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10, marginTop: 10 }}>
+            {assets.map((a) => (
+              <div key={a.id} style={{ padding: 12, background: '#132247', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <strong>{a.name} ({a.symbol.toUpperCase()})</strong>
+                <span className={`badge ${a.status === 'ACTIVE' ? 'status-green' : 'status-gray'}`} style={{ marginLeft: 8 }}>{a.status}</span>
+                <p style={{ fontSize: '0.8rem', margin: '4px 0', color: 'var(--gold)' }}>Network: {a.network}</p>
+                <small className="mono" style={{ wordBreak: 'break-all', display: 'block', fontSize: '0.75rem' }}>{a.depositAddress}</small>
+                <Button variant="light" style={{ marginTop: 8 }} onClick={() => { setSelectedAsset(a); setAssetForm(a); }}>Edit Config</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pending Crypto Deposits Reviews */}
+      <section className="panel">
+        <h3>Pending Crypto Deposit Requests</h3>
+        {deposits.length === 0 ? (
+          <p className="muted">No crypto deposit requests recorded.</p>
+        ) : (
+          deposits.map((d) => (
+            <div key={d.id} className="card-box" style={{ marginBottom: 12, padding: 12, background: '#132247' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <strong>Customer: {formatName(d.user?.profile)} ({d.user?.email})</strong>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Asset: {d.asset?.name} ({d.asset?.symbol?.toUpperCase()}) · Network: {d.asset?.network}
+                  </div>
+                </div>
+                <Status>{d.status}</Status>
+              </div>
+
+              <div style={{ margin: '8px 0', padding: 8, background: '#0a142f', borderRadius: 6 }}>
+                <div><strong>Deposit Amount:</strong> <span style={{ color: 'var(--gold)' }}>{d.amount} {d.asset?.symbol?.toUpperCase()}</span></div>
+                {d.txHash && <div><strong>Tx Hash:</strong> <span className="mono">{d.txHash}</span></div>}
+                <small className="muted">Requested at: {new Date(d.createdAt).toLocaleString()}</small>
+              </div>
+
+              {d.adminNotes && <p style={{ fontSize: '0.85rem', color: '#f59e0b' }}><strong>Reason:</strong> {d.adminNotes}</p>}
+
+              {d.status === 'PENDING' && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <Button onClick={() => handleReviewDeposit(d.id, 'APPROVED')}>Approve & Credit Balance</Button>
+                  <Button variant="light" onClick={() => handleReviewDeposit(d.id, 'SUSPENDED')}>Suspend / Hold</Button>
+                  <Button variant="light" onClick={() => handleReviewDeposit(d.id, 'REJECTED')}>Reject</Button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </section>
     </>
   );
@@ -774,19 +1067,96 @@ function AdminNotifs({ toast }) {
 
 function SupportTab({ toast }) {
   const [tickets, setTickets] = useState([]);
-  const [reply, setReply] = useState('');
+  const [replies, setReplies] = useState({});
   const load = () => api.admin.support().then(setTickets).catch((e) => toast(e.message));
   useEffect(() => { load(); }, []);
+
+  const handleSendReply = async (ticketId) => {
+    const msg = replies[ticketId];
+    if (!msg?.trim()) return;
+    try {
+      await api.admin.supportReply(ticketId, msg);
+      toast('Reply sent to customer.');
+      setReplies({ ...replies, [ticketId]: '' });
+      load();
+    } catch (e) {
+      toast(e.message);
+    }
+  };
+
+  const handleStatusChange = async (ticketId, status) => {
+    try {
+      await api.admin.supportStatus(ticketId, status);
+      toast(`Ticket status changed to ${status}.`);
+      load();
+    } catch (e) {
+      toast(e.message);
+    }
+  };
+
   return (
     <section className="panel">
-      {tickets.length === 0 ? <p className="muted">No tickets.</p> : tickets.map((t) => (
-        <div key={t.id} className="ticket-item">
-          <strong>{t.subject}</strong> <Status>{t.status}</Status>
-          <p>{t.message}</p>
-          <Field label="Reply" value={reply} onChange={(e) => setReply(e.target.value)} />
-          <Button onClick={async () => { await api.admin.supportReply(t.id, reply); setReply(''); load(); }}>Send reply</Button>
-        </div>
-      ))}
+      <h3>Customer Support Conversations</h3>
+      {tickets.length === 0 ? (
+        <p className="muted">No support tickets found.</p>
+      ) : (
+        tickets.map((t) => (
+          <div key={t.id} className="card-box" style={{ marginBottom: 16, padding: 14, background: '#132247' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <strong>{t.subject}</strong>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                  From: {formatName(t.user?.profile)} ({t.user?.email}) · Category: <span className="badge-inline">{t.category || 'General'}</span> · Date: {new Date(t.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <select
+                  value={t.status}
+                  onChange={(e) => handleStatusChange(t.id, e.target.value)}
+                  style={{ padding: '4px 8px', borderRadius: 4, background: '#0a142f', color: '#fff', border: '1px solid var(--border)' }}
+                >
+                  <option value="OPEN">OPEN</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="RESOLVED">RESOLVED</option>
+                  <option value="CLOSED">CLOSED</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ margin: '10px 0', padding: 10, background: '#0a142f', borderRadius: 6 }}>
+              <small className="muted">Initial Customer Query:</small>
+              <p style={{ margin: '4px 0 0 0' }}>{t.message}</p>
+            </div>
+
+            {/* Existing replies thread */}
+            {(t.replies || []).length > 0 && (
+              <div style={{ margin: '10px 0', paddingLeft: 10, borderLeft: '2px solid var(--gold)' }}>
+                <small className="muted">Conversation Thread:</small>
+                {t.replies.map((r) => (
+                  <div key={r.id} style={{ marginTop: 6, fontSize: '0.9rem' }}>
+                    <strong>{r.isAdmin ? '✦ Admin Reply' : 'Customer Reply'}:</strong> {r.message}
+                    <small className="muted" style={{ display: 'block', fontSize: '0.75rem' }}>{new Date(r.createdAt).toLocaleString()}</small>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Admin reply input */}
+            {['OPEN', 'IN_PROGRESS'].includes(t.status) && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <input
+                  type="text"
+                  placeholder="Write response to customer..."
+                  value={replies[t.id] || ''}
+                  onChange={(e) => setReplies({ ...replies, [t.id]: e.target.value })}
+                  style={{ flex: 1 }}
+                />
+                <Button onClick={() => handleSendReply(t.id)}>Send Reply</Button>
+              </div>
+            )}
+          </div>
+        ))
+      )}
     </section>
   );
 }

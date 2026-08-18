@@ -62,6 +62,210 @@ router.get('/overview', async (_req, res, next) => {
   }
 });
 
+// Pending Actions Center
+router.get('/pending-actions', async (_req, res, next) => {
+  try {
+    const [
+      pendingTransfers,
+      pendingApplications,
+      pendingLoans,
+      pendingCryptoDeposits,
+      pendingSupportTickets,
+      pendingKyc,
+      pendingCards,
+    ] = await Promise.all([
+      prisma.transfer.count({ where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } } }),
+      prisma.accountApplication.count({ where: { status: 'PENDING' } }),
+      prisma.loanApplication.count({ where: { status: { in: ['PENDING', 'UNDER_REVIEW'] } } }),
+      prisma.cryptoDeposit.count({ where: { status: 'PENDING' } }),
+      prisma.supportTicket.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+      prisma.userProfile.count({ where: { kycStatus: 'PENDING', idDocumentPath: { not: null } } }),
+      prisma.cardRequest.count({ where: { status: 'PENDING' } }),
+    ]);
+
+    res.json({
+      pendingTransfers,
+      pendingApplications,
+      pendingLoans,
+      pendingCryptoDeposits,
+      pendingSupportTickets,
+      pendingKyc,
+      pendingCards,
+      totalPending: pendingTransfers + pendingApplications + pendingLoans + pendingCryptoDeposits + pendingSupportTickets + pendingKyc + pendingCards,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Admin Crypto Assets Management
+router.get('/crypto/assets', async (_req, res, next) => {
+  try {
+    const assets = await prisma.cryptoAsset.findMany({ orderBy: { symbol: 'asc' } });
+    res.json(assets);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/crypto/assets', async (req, res, next) => {
+  try {
+    const data = z.object({
+      name: z.string().min(1),
+      symbol: z.string().min(1).toLowerCase(),
+      network: z.string().min(1),
+      depositAddress: z.string().min(1),
+      status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
+      instructions: z.string().optional(),
+    }).parse(req.body);
+
+    const asset = await prisma.cryptoAsset.upsert({
+      where: { symbol: data.symbol },
+      update: data,
+      create: data,
+    });
+
+    await createAuditLog({
+      actorId: req.auth!.userId,
+      action: 'UPDATE_CRYPTO_ASSET',
+      targetType: 'CryptoAsset',
+      targetId: asset.id,
+      newValue: data,
+      req,
+    });
+
+    res.json(asset);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch('/crypto/assets/:id', async (req, res, next) => {
+  try {
+    const data = z.object({
+      name: z.string().optional(),
+      network: z.string().optional(),
+      depositAddress: z.string().optional(),
+      status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
+      instructions: z.string().optional(),
+    }).parse(req.body);
+
+    const asset = await prisma.cryptoAsset.update({
+      where: { id: req.params.id },
+      data,
+    });
+
+    await createAuditLog({
+      actorId: req.auth!.userId,
+      action: 'UPDATE_CRYPTO_ASSET',
+      targetType: 'CryptoAsset',
+      targetId: asset.id,
+      newValue: data,
+      req,
+    });
+
+    res.json(asset);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Admin Crypto Deposits Review
+router.get('/crypto/deposits', async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const where: Record<string, unknown> = {};
+    if (status && status !== 'ALL') where.status = status;
+
+    const deposits = await prisma.cryptoDeposit.findMany({
+      where,
+      include: { user: { include: { profile: true } }, asset: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    res.json(deposits);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/crypto/deposits/:id/review', async (req, res, next) => {
+  try {
+    const { status, adminNotes } = z.object({
+      status: z.enum(['APPROVED', 'REJECTED', 'SUSPENDED']),
+      adminNotes: z.string().optional(),
+    }).parse(req.body);
+
+    if (['REJECTED', 'SUSPENDED'].includes(status) && !adminNotes) {
+      return res.status(400).json({ error: 'Reason (adminNotes) is required for rejection/suspension' });
+    }
+
+    const deposit = await prisma.cryptoDeposit.findUnique({
+      where: { id: req.params.id },
+      include: { asset: true, user: true },
+    });
+
+    if (!deposit) return res.status(404).json({ error: 'Crypto deposit request not found' });
+
+    if (deposit.status === 'APPROVED') {
+      return res.status(400).json({ error: 'Deposit request has already been approved' });
+    }
+
+    const updated = await prisma.cryptoDeposit.update({
+      where: { id: deposit.id },
+      data: { status, adminNotes },
+    });
+
+    if (status === 'APPROVED') {
+      // Find or create Crypto account for user
+      let cryptoAcc = await prisma.account.findFirst({
+        where: { userId: deposit.userId, type: 'CRYPTO' },
+      });
+
+      if (!cryptoAcc) {
+        // Fallback to checking account if no crypto account exists
+        cryptoAcc = await prisma.account.findFirst({
+          where: { userId: deposit.userId, type: 'CHECKING' },
+        });
+      }
+
+      if (cryptoAcc) {
+        await prisma.$transaction(async (tx) => {
+          await creditAccount(tx, {
+            accountId: cryptoAcc!.id,
+            amount: deposit.amount,
+            currency: deposit.asset.symbol.toUpperCase(),
+            type: 'DEPOSIT',
+            description: `Crypto Deposit - ${deposit.asset.name} (${deposit.asset.symbol.toUpperCase()})`,
+            userId: deposit.userId,
+            createdById: req.auth!.userId,
+          });
+        });
+      }
+    }
+
+    await createNotification({
+      userId: deposit.userId,
+      title: `Crypto Deposit ${status}`,
+      message: `Your deposit of ${deposit.amount} ${deposit.asset.symbol.toUpperCase()} has been ${status.toLowerCase()}.${adminNotes ? ` Reason: ${adminNotes}` : ''}`,
+      type: 'SYSTEM',
+    });
+
+    await createAuditLog({
+      actorId: req.auth!.userId,
+      action: `CRYPTO_DEPOSIT_${status}`,
+      targetType: 'CryptoDeposit',
+      targetId: deposit.id,
+      reason: adminNotes,
+      req,
+    });
+
+    res.json(updated);
+  } catch (e) {
+    next(e);
+  }
+});
+
 // Applications
 router.get('/applications', async (req, res, next) => {
   try {

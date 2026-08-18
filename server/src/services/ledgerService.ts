@@ -216,7 +216,7 @@ export async function adminAdjustBalance(params: {
   }, { timeout: 20000 });
 }
 
-export async function createAccountsForUser(userId: string, countryCode: string, currency: string, accountType: 'CHECKING' | 'SAVINGS' | 'FIXED_DEPOSIT' = 'CHECKING') {
+export async function createAccountsForUser(userId: string, countryCode: string, currency: string, accountType: import('@prisma/client').AccountType = 'CHECKING') {
   const { generateAccountNumber } = await import('../utils/generators.js');
   const types: Array<'CHECKING' | 'SAVINGS' | 'FIXED_DEPOSIT'> = ['CHECKING', 'SAVINGS', 'FIXED_DEPOSIT'];
   const accounts = [];
