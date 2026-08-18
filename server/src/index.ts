@@ -20,17 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps, curl, or same-origin requests)
-    if (!origin || process.env.NODE_ENV !== 'production') {
-      return callback(null, true);
-    }
-    const allowed = [process.env.CLIENT_URL, 'http://localhost:5173'].filter(Boolean);
-    if (allowed.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -47,6 +37,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/crypto', cryptoRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use(errorHandler);
 
@@ -60,10 +51,12 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
-Promise.all([initDefaultSettings(), initAdminUser()]).then(() => {
-  app.listen(PORT, () => console.log(`NEXA API running on http://localhost:${PORT}`));
-}).catch(err => {
-  console.error('Initialization error:', err);
-  app.listen(PORT, () => console.log(`NEXA API running on http://localhost:${PORT}`));
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`NEXA Bank production server listening on 0.0.0.0:${PORT}`);
 });
+
+Promise.all([initDefaultSettings(), initAdminUser()]).catch(err => {
+  console.error('Async initialization error:', err);
+});
+
 
