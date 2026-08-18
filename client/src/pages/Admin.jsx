@@ -536,6 +536,7 @@ function Users({ toast }) {
             <Status>{u.status}</Status>
             <div>
               <Button onClick={() => api.admin.user(u.id).then(setSelected)}>Open</Button>
+              <Button variant="light" onClick={() => api.admin.user(u.id).then((res) => setSelected({ ...res, initialTab: 'Crypto Wallets' }))}>🔑 Crypto Wallets</Button>
               {u.status === 'ACTIVE' && <Button variant="light" onClick={async () => { await api.admin.suspendUser(u.id); load(); }}>Suspend</Button>}
               {u.status === 'SUSPENDED' && <Button variant="light" onClick={async () => { await api.admin.activateUser(u.id); load(); }}>Activate</Button>}
             </div>
@@ -589,7 +590,7 @@ function KycTab({ toast }) {
 }
 
 function CustomerModal({ data, onClose, toast }) {
-  const [tab, setTab] = useState('Overview');
+  const [tab, setTab] = useState(data.initialTab || 'Overview');
   const [detail, setDetail] = useState(data.user || data);
   const [amt, setAmt] = useState({ amount: '', reason: 'Admin adjustment', description: 'Funds added', source: 'NEXA' });
   const [savingsAmt, setSavingsAmt] = useState({ amount: '', description: 'Admin Savings Credit', reason: 'Deposit adjustment' });
