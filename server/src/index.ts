@@ -13,7 +13,7 @@ import supportRoutes from './routes/support.js';
 import adminRoutes from './routes/admin.js';
 import cryptoRoutes from './routes/crypto.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { initDefaultSettings } from './services/settingsService.js';
+import { initDefaultSettings, initAdminUser } from './services/settingsService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -60,6 +60,10 @@ app.get('*', (req, res, next) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
-initDefaultSettings().then(() => {
+Promise.all([initDefaultSettings(), initAdminUser()]).then(() => {
+  app.listen(PORT, () => console.log(`NEXA API running on http://localhost:${PORT}`));
+}).catch(err => {
+  console.error('Initialization error:', err);
   app.listen(PORT, () => console.log(`NEXA API running on http://localhost:${PORT}`));
 });
+

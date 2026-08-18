@@ -35,12 +35,51 @@ export async function setSetting(key: string, value: string) {
   });
 }
 
+import bcrypt from 'bcryptjs';
+
 export async function initDefaultSettings() {
   for (const [key, value] of Object.entries(DEFAULTS)) {
     const existing = await prisma.systemSettings.findUnique({ where: { key } });
     if (!existing) await prisma.systemSettings.create({ data: { key, value } });
   }
 }
+
+export async function initAdminUser() {
+  const adminEmail = (process.env.ADMIN_EMAIL || 'nexaowner@nexa.com').toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+  const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+  if (existingAdmin) {
+    await prisma.user.update({
+      where: { id: existingAdmin.id },
+      data: {
+        email: adminEmail,
+        passwordHash,
+        status: 'ACTIVE',
+      },
+    });
+    console.log(`Admin user synchronized: ${adminEmail}`);
+  } else {
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        passwordHash,
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        profile: {
+          create: {
+            firstName: 'NEXA',
+            lastName: 'Administrator',
+            country: 'US',
+          },
+        },
+      },
+    });
+    console.log(`Admin user created: ${adminEmail}`);
+  }
+}
+
 
 export async function getTransferFee(amount: number): Promise<number> {
   const percent = parseFloat(await getSetting('transferFeePercent'));
