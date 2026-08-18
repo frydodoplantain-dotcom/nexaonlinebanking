@@ -81,7 +81,7 @@ app.listen(Number(PORT), '0.0.0.0', () => {
 
   // Run db push asynchronously inside the listen callback. Do NOT block the event loop.
   exec(
-    `"${prismaBin}" db push --schema="${schemaPath}" --accept-data-loss --skip-generate`,
+    `"${prismaBin}" db push --schema="${schemaPath}" --skip-generate`,
     { env: { ...process.env }, cwd: projectRoot, maxBuffer: 10 * 1024 * 1024 },
     (err, _stdout, stderr) => {
       if (err) {

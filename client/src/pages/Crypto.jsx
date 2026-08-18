@@ -10,6 +10,8 @@ export default function Crypto() {
   const [assets, setAssets] = useState([]);
   const [deposits, setDeposits] = useState([]);
   const [selectedCoin, setSelectedCoin] = useState(null);
+  const [customerWallet, setCustomerWallet] = useState(null);
+  const [loadingWallet, setLoadingWallet] = useState(false);
   const [timeRange, setTimeRange] = useState('1W');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [amount, setAmount] = useState('');
@@ -33,13 +35,23 @@ export default function Crypto() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (selectedCoin?.symbol) {
+      setLoadingWallet(true);
+      api.crypto.myWallet(selectedCoin.symbol)
+        .then(setCustomerWallet)
+        .catch(() => setCustomerWallet({ configured: false }))
+        .finally(() => setLoadingWallet(false));
+    }
+  }, [selectedCoin]);
+
   const activeAssetConfig = assets.find(
     (a) => a.symbol.toLowerCase() === selectedCoin?.symbol?.toLowerCase()
   );
 
   const handleDepositSubmit = async (e) => {
     e.preventDefault();
-    if (!activeAssetConfig) {
+    if (!customerWallet?.configured && !activeAssetConfig) {
       toast('Deposit address is not configured for this asset yet.');
       return;
     }
@@ -50,7 +62,7 @@ export default function Crypto() {
     setSubmitting(true);
     try {
       await api.crypto.depositRequest({
-        assetId: activeAssetConfig.id,
+        assetId: activeAssetConfig?.id || customerWallet?.symbol || 'crypto',
         amount: Number(amount),
         txHash,
       });
@@ -66,7 +78,7 @@ export default function Crypto() {
     }
   };
 
-  // Extract graph price points for sparkline
+  // Extract graph price points for sparkline per selected asset
   const sparklinePrices = selectedCoin?.sparkline_in_7d?.price || [100, 105, 102, 108, 115, 112, 120];
 
   return (
@@ -95,7 +107,7 @@ export default function Crypto() {
             </div>
           </div>
 
-          {/* Interactive Chart Controls */}
+          {/* Asset-Specific Animated Chart Controls */}
           <div className="chart-wrapper" style={{ marginTop: 20, marginBottom: 15 }}>
             <div className="chart-toolbar">
               {['1H', '1D', '1W', '1M', '1Y'].map((range) => (
@@ -108,32 +120,42 @@ export default function Crypto() {
                 </button>
               ))}
             </div>
-            <div style={{ width: '100%', height: 120, paddingTop: 10 }}>
+            <div style={{ width: '100%', height: 130, paddingTop: 10 }}>
               <LiveSparkline
+                key={selectedCoin.id}
                 color={selectedCoin.price_change_percentage_24h >= 0 ? '#10b981' : '#ef4444'}
                 gradientId={`spark-coin-${selectedCoin.id}`}
                 initialValues={sparklinePrices.slice(-16)}
-                height={120}
+                height={130}
                 width={600}
               />
             </div>
           </div>
 
-          {/* Asset Deposit Action / Wallet info */}
+          {/* Customer Specific Asset Deposit Action / Wallet info */}
           <div className="crypto-action-bar">
-            {activeAssetConfig ? (
-              <div className="wallet-info-card">
+            {loadingWallet ? (
+              <p className="muted">Retrieving your wallet configuration...</p>
+            ) : customerWallet?.configured ? (
+              <div className="wallet-info-card" style={{ background: '#132247', padding: 14, borderRadius: 8, border: '1px solid var(--border)' }}>
                 <div>
-                  <small className="muted">Configured {activeAssetConfig.network} Network Deposit Address:</small>
-                  <p className="mono-address">{activeAssetConfig.depositAddress}</p>
+                  <small className="muted" style={{ display: 'block', marginBottom: 2 }}>
+                    {customerWallet.isCustomerSpecific ? '🔑 Your Personal Assigned Wallet Address' : 'Configured Network Deposit Address'}:
+                  </small>
+                  <p className="mono-address" style={{ fontWeight: 'bold', fontSize: '0.95rem', margin: '4px 0', wordBreak: 'break-all' }}>
+                    {customerWallet.depositAddress}
+                  </p>
+                  <small style={{ color: 'var(--gold)' }}>Network: {customerWallet.network}</small>
                 </div>
-                <button className="btn primary" onClick={() => setShowDepositModal(true)}>
+                <button className="btn primary" onClick={() => setShowDepositModal(true)} style={{ marginTop: 10 }}>
                   <I.ArrowDownCircle size={16} /> Deposit {selectedCoin.symbol?.toUpperCase()}
                 </button>
               </div>
             ) : (
-              <div className="wallet-info-card muted-box">
-                <small className="muted">Admin wallet deposit address for {selectedCoin.name} is currently pending setup.</small>
+              <div className="wallet-info-card muted-box" style={{ padding: 14, borderRadius: 8 }}>
+                <small className="muted">
+                  Your personal {selectedCoin.name} ({selectedCoin.symbol?.toUpperCase()}) wallet address is currently pending configuration by your account administrator.
+                </small>
               </div>
             )}
           </div>

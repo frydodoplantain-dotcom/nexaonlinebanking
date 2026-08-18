@@ -990,6 +990,7 @@ router.get('/customers/:id/detail', async (req, res, next) => {
         cards: true,
         loans: { include: { repayments: true } },
         loanApplications: true,
+        cryptoWallets: true,
         transactions: { orderBy: { createdAt: 'desc' }, take: 50 },
         transfersSent: { orderBy: { createdAt: 'desc' }, take: 20 },
         transfersReceived: { orderBy: { createdAt: 'desc' }, take: 20 },
@@ -1005,6 +1006,87 @@ router.get('/customers/:id/detail', async (req, res, next) => {
     });
 
     res.json({ ...user, auditLogs });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Admin Customer-Specific Crypto Wallet Configuration Endpoints
+router.get('/customers/:userId/crypto-wallets', async (req, res, next) => {
+  try {
+    const userId = req.params.userId as string;
+    const wallets = await prisma.customerCryptoWallet.findMany({
+      where: { userId },
+      orderBy: { symbol: 'asc' },
+    });
+    res.json(wallets);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/customers/:userId/crypto-wallets', async (req, res, next) => {
+  try {
+    const userId = req.params.userId as string;
+    const data = z.object({
+      symbol: z.string().min(1).toLowerCase(),
+      network: z.string().min(1),
+      depositAddress: z.string().min(1),
+      status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
+    }).parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'Customer not found' });
+
+    const wallet = await prisma.customerCryptoWallet.upsert({
+      where: {
+        userId_symbol: { userId, symbol: data.symbol },
+      },
+      update: {
+        network: data.network,
+        depositAddress: data.depositAddress,
+        status: data.status,
+      },
+      create: {
+        userId,
+        symbol: data.symbol,
+        network: data.network,
+        depositAddress: data.depositAddress,
+        status: data.status,
+      },
+    });
+
+    await createAuditLog({
+      actorId: req.auth!.userId,
+      action: 'UPDATE_CUSTOMER_CRYPTO_WALLET',
+      targetType: 'CustomerCryptoWallet',
+      targetId: wallet.id,
+      newValue: { userId, symbol: data.symbol, depositAddress: data.depositAddress },
+      req,
+    });
+
+    res.json(wallet);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/customers/:userId/crypto-wallets/:walletId', async (req, res, next) => {
+  try {
+    const { userId, walletId } = req.params;
+    await prisma.customerCryptoWallet.deleteMany({
+      where: { id: walletId, userId },
+    });
+
+    await createAuditLog({
+      actorId: req.auth!.userId,
+      action: 'DELETE_CUSTOMER_CRYPTO_WALLET',
+      targetType: 'CustomerCryptoWallet',
+      targetId: walletId,
+      req,
+    });
+
+    res.json({ message: 'Customer crypto wallet removed' });
   } catch (e) {
     next(e);
   }

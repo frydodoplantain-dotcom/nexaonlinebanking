@@ -103,6 +103,8 @@ export const api = {
   crypto: {
     market: () => request('/crypto/market'),
     assets: () => request('/crypto/assets'),
+    myWallet: (symbol) => request(`/crypto/my-wallet/${symbol}`),
+    myWallets: () => request('/crypto/my-wallets'),
     depositRequest: (data) => request('/crypto/deposit-request', { method: 'POST', body: JSON.stringify(data) }),
     deposits: () => request('/crypto/deposits'),
   },
@@ -113,6 +115,9 @@ export const api = {
     cryptoAssets: () => request('/admin/crypto/assets'),
     createCryptoAsset: (data) => request('/admin/crypto/assets', { method: 'POST', body: JSON.stringify(data) }),
     updateCryptoAsset: (id, data) => request(`/admin/crypto/assets/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    customerCryptoWallets: (userId) => request(`/admin/customers/${userId}/crypto-wallets`),
+    updateCustomerCryptoWallet: (userId, data) => request(`/admin/customers/${userId}/crypto-wallets`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteCustomerCryptoWallet: (userId, walletId) => request(`/admin/customers/${userId}/crypto-wallets/${walletId}`, { method: 'DELETE' }),
     cryptoDeposits: (status) => request(`/admin/crypto/deposits?status=${status || 'ALL'}`),
     reviewCryptoDeposit: (id, data) => request(`/admin/crypto/deposits/${id}/review`, { method: 'POST', body: JSON.stringify(data) }),
     applications: (params) => request(`/admin/applications?${new URLSearchParams(params)}`),

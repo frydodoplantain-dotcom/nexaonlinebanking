@@ -15,6 +15,7 @@ const TABS = ['Overview', 'Pending approvals', 'External Transfers', 'Crypto Man
 
 export default function Admin() {
   const [tab, setTab] = useState('Overview');
+  const [adminMobileOpen, setAdminMobileOpen] = useState(false);
   const [overview, setOverview] = useState(null);
   const { logout } = useAuth();
   const { toast } = useToast();
@@ -26,18 +27,40 @@ export default function Admin() {
 
   return (
     <div className="admin">
-      <aside className="admin-side">
+      <aside className={`admin-side ${adminMobileOpen ? 'open' : ''}`}>
         <Logo />
         <p>ADMIN CONSOLE</p>
         {TABS.map((x) => (
-          <button key={x} className={tab === x ? 'active' : ''} onClick={() => setTab(x)}>{x}</button>
+          <button key={x} className={tab === x ? 'active' : ''} onClick={() => { setTab(x); setAdminMobileOpen(false); }}>{x}</button>
         ))}
         <button className="logout" onClick={async () => { await logout(); nav('/'); }}>Log out</button>
       </aside>
+      {adminMobileOpen && <div className="sidebar-overlay" onClick={() => setAdminMobileOpen(false)} />}
       <main>
-        <header className="admin-head">
-          <div><p>Administration</p><h1>{tab}</h1></div>
-          <Button onClick={() => setTab('Create customer')}><I.Plus /> Create customer</Button>
+        <header className="admin-head" style={{ flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button className="btn outline btn-xs mobile-menu" onClick={() => setAdminMobileOpen(!adminMobileOpen)} style={{ padding: '6px 10px' }}>
+              <I.Menu size={18} /> Menu
+            </button>
+            <div>
+              <p>Administration</p>
+              <h1>{tab}</h1>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select
+              className="admin-tab-select"
+              value={tab}
+              onChange={(e) => setTab(e.target.value)}
+              style={{ padding: '6px 12px', background: '#132247', color: '#fff', border: '1px solid var(--border)', borderRadius: 6 }}
+            >
+              {TABS.map((x) => (
+                <option key={x} value={x}>{x}</option>
+              ))}
+            </select>
+            <Button onClick={() => setTab('Create customer')}><I.Plus /> Create customer</Button>
+          </div>
         </header>
         {tab === 'Overview' && overview && <Overview stats={overview} setTab={setTab} toast={toast} />}
         {tab === 'Pending approvals' && <Approvals toast={toast} />}
@@ -592,7 +615,7 @@ function CustomerModal({ data, onClose, toast }) {
         </div>
 
         <div className="tabs">
-          {['Overview', 'Profile & KYC', 'Multi-Account Funding', 'Loans & Cards', 'Security', 'Audit Logs'].map((t) => (
+          {['Overview', 'Profile & KYC', 'Multi-Account Funding', 'Loans & Cards', 'Crypto Wallets', 'Security', 'Audit Logs'].map((t) => (
             <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>
           ))}
         </div>
@@ -721,6 +744,10 @@ function CustomerModal({ data, onClose, toast }) {
             </div>
           )}
 
+          {tab === 'Crypto Wallets' && (
+            <CustomerCryptoWalletsTab userId={detail.id} wallets={detail.cryptoWallets || []} reload={reload} toast={toast} />
+          )}
+
           {tab === 'Security' && (
             <div style={{ display: 'grid', gap: 12 }}>
               <p>PIN Status: Enabled ({String(detail.pinCredential?.enabled)}) · Locked ({String(detail.pinCredential?.locked)})</p>
@@ -748,6 +775,130 @@ function CustomerModal({ data, onClose, toast }) {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CustomerCryptoWalletsTab({ userId, wallets = [], reload, toast }) {
+  const [wForm, setWForm] = useState({
+    symbol: 'btc',
+    network: 'Bitcoin',
+    depositAddress: '',
+    status: 'ACTIVE',
+  });
+
+  const [editingWallet, setEditingWallet] = useState(null);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      await api.admin.updateCustomerCryptoWallet(userId, wForm);
+      toast(`Customer ${wForm.symbol.toUpperCase()} wallet saved.`);
+      setWForm({ symbol: 'btc', network: 'Bitcoin', depositAddress: '', status: 'ACTIVE' });
+      setEditingWallet(null);
+      reload();
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  const handleDelete = async (walletId) => {
+    if (!confirm('Are you sure you want to remove this wallet for this customer?')) return;
+    try {
+      await api.admin.deleteCustomerCryptoWallet(userId, walletId);
+      toast('Customer crypto wallet removed.');
+      reload();
+    } catch (err) {
+      toast(err.message);
+    }
+  };
+
+  const selectSymbol = (sym) => {
+    const networks = { btc: 'Bitcoin', eth: 'Ethereum', usdt: 'ERC20', sol: 'Solana', bnb: 'BSC (BEP20)' };
+    const existing = wallets.find((w) => w.symbol.toLowerCase() === sym);
+    if (existing) {
+      setEditingWallet(existing);
+      setWForm(existing);
+    } else {
+      setEditingWallet(null);
+      setWForm({ symbol: sym, network: networks[sym] || 'Mainnet', depositAddress: '', status: 'ACTIVE' });
+    }
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div style={{ background: '#132247', padding: 14, borderRadius: 8, border: '1px solid var(--border)' }}>
+        <h4 style={{ margin: '0 0 4px 0', color: 'var(--gold)' }}>🔑 Individual Customer Crypto Wallets</h4>
+        <p className="muted" style={{ fontSize: '0.85rem' }}>
+          Configure unique deposit addresses assigned specifically to this customer.
+        </p>
+
+        {/* Quick Symbol Selector */}
+        <div style={{ display: 'flex', gap: 8, margin: '12px 0', flexWrap: 'wrap' }}>
+          {['btc', 'eth', 'usdt', 'sol', 'bnb'].map((sym) => {
+            const hasWallet = wallets.some((w) => w.symbol.toLowerCase() === sym);
+            const isSel = wForm.symbol === sym;
+            return (
+              <button
+                key={sym}
+                type="button"
+                className={`btn ${isSel ? 'primary' : 'outline'}`}
+                onClick={() => selectSymbol(sym)}
+                style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+              >
+                {sym.toUpperCase()} {hasWallet ? '✓' : ''}
+              </button>
+            );
+          })}
+        </div>
+
+        <form onSubmit={handleSave} style={{ display: 'grid', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <Field label="Asset Symbol" value={wForm.symbol} onChange={(e) => setWForm({ ...wForm, symbol: e.target.value.toLowerCase() })} select>
+              <option value="btc">BTC (Bitcoin)</option>
+              <option value="eth">ETH (Ethereum)</option>
+              <option value="usdt">USDT (Tether)</option>
+              <option value="sol">SOL (Solana)</option>
+              <option value="bnb">BNB (Binance)</option>
+            </Field>
+
+            <Field label="Network" value={wForm.network} onChange={(e) => setWForm({ ...wForm, network: e.target.value })} required />
+          </div>
+
+          <Field label="Customer's Unique Wallet Address" value={wForm.depositAddress} onChange={(e) => setWForm({ ...wForm, depositAddress: e.target.value })} required />
+
+          <Field label="Wallet Status" value={wForm.status} onChange={(e) => setWForm({ ...wForm, status: e.target.value })} select>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </Field>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+            <Button type="submit">{editingWallet ? 'Update Customer Wallet' : 'Assign Wallet Address'}</Button>
+          </div>
+        </form>
+      </div>
+
+      {/* Configured Wallets List for this Customer */}
+      <div>
+        <h4 style={{ margin: '0 0 8px 0' }}>Current Assigned Wallets ({wallets.length})</h4>
+        {wallets.length === 0 ? (
+          <p className="muted">No individual crypto wallets configured for this customer yet.</p>
+        ) : (
+          wallets.map((w) => (
+            <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 10, background: '#132247', borderRadius: 6, marginBottom: 8, border: '1px solid var(--border)' }}>
+              <div>
+                <strong>{w.symbol.toUpperCase()} Wallet</strong> <span className={`badge ${w.status === 'ACTIVE' ? 'status-green' : 'status-gray'}`} style={{ fontSize: 10 }}>{w.status}</span>
+                <div style={{ fontSize: '0.8rem', color: 'var(--gold)' }}>Network: {w.network}</div>
+                <small className="mono" style={{ wordBreak: 'break-all', display: 'block' }}>{w.depositAddress}</small>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <Button variant="light" onClick={() => { setEditingWallet(w); setWForm(w); }}>Edit</Button>
+                <Button variant="light" onClick={() => handleDelete(w.id)}>Remove</Button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

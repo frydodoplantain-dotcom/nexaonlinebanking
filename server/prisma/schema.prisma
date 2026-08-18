@@ -181,6 +181,7 @@ model User {
   ledgerEntriesCreated LedgerEntry[]        @relation("LedgerCreator")
   fixedDeposits        FixedDeposit[]
   cryptoDeposits       CryptoDeposit[]
+  cryptoWallets        CustomerCryptoWallet[]
 }
 
 model UserProfile {
@@ -579,4 +580,19 @@ model CryptoDeposit {
 
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   asset CryptoAsset @relation(fields: [assetId], references: [id])
+}
+
+model CustomerCryptoWallet {
+  id             String   @id @default(uuid())
+  userId         String
+  symbol         String
+  network        String
+  depositAddress String
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, symbol])
 }

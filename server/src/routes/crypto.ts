@@ -90,6 +90,58 @@ router.get('/assets', async (_req, res, next) => {
   }
 });
 
+router.get('/my-wallets', requireAuth, requireActiveCustomer, async (req, res, next) => {
+  try {
+    const wallets = await prisma.customerCryptoWallet.findMany({
+      where: { userId: req.auth!.userId, status: 'ACTIVE' },
+    });
+    res.json(wallets);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/my-wallet/:symbol', requireAuth, requireActiveCustomer, async (req, res, next) => {
+  try {
+    const symbol = (req.params.symbol as string).toLowerCase();
+    const customerWallet = await prisma.customerCryptoWallet.findUnique({
+      where: {
+        userId_symbol: {
+          userId: req.auth!.userId,
+          symbol,
+        },
+      },
+    });
+
+    if (customerWallet && customerWallet.status === 'ACTIVE') {
+      return res.json({
+        configured: true,
+        depositAddress: customerWallet.depositAddress,
+        network: customerWallet.network,
+        symbol: customerWallet.symbol,
+        isCustomerSpecific: true,
+      });
+    }
+
+    // Check if global fallback exists
+    const globalAsset = await prisma.cryptoAsset.findUnique({ where: { symbol } });
+    if (globalAsset && globalAsset.status === 'ACTIVE') {
+      return res.json({
+        configured: true,
+        depositAddress: globalAsset.depositAddress,
+        network: globalAsset.network,
+        symbol: globalAsset.symbol,
+        instructions: globalAsset.instructions,
+        isCustomerSpecific: false,
+      });
+    }
+
+    res.json({ configured: false });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/deposits', requireAuth, requireActiveCustomer, async (req, res, next) => {
   try {
     const deposits = await prisma.cryptoDeposit.findMany({
