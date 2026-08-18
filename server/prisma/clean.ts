@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-const adminEmail = process.env.ADMIN_EMAIL || 'admin@nexa.com';
+const adminEmail = process.env.ADMIN_EMAIL || 'nexaowner@nexa.com';
 
 async function main() {
   const admin = await prisma.user.findUnique({ where: { email: adminEmail } });

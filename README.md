@@ -17,8 +17,8 @@ npm run dev
 
 Set in `.env` / `server/.env` (defaults):
 
-- Email: `admin@nexa.com`
-- Password: `NexaAdmin2026!`
+- Email: `nexaowner@nexa.com`
+- Password: `admin`
 
 Change these before any production use.
 

@@ -8,12 +8,22 @@ const prisma = new PrismaClient();
 async function main() {
   await initDefaultSettings();
 
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@nexa.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'NexaAdmin2026!';
+  const adminEmail = (process.env.ADMIN_EMAIL || 'nexaowner@nexa.com').toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
 
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (!existing) {
-    const passwordHash = await bcrypt.hash(adminPassword, 12);
+  const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+  if (existingAdmin) {
+    await prisma.user.update({
+      where: { id: existingAdmin.id },
+      data: {
+        email: adminEmail,
+        passwordHash,
+        status: 'ACTIVE',
+      },
+    });
+    console.log(`Admin user updated: ${adminEmail}`);
+  } else {
     await prisma.user.create({
       data: {
         email: adminEmail,
@@ -29,12 +39,11 @@ async function main() {
         },
       },
     });
-    console.log(`Admin created: ${adminEmail}`);
-  } else {
-    console.log('Admin already exists');
+    console.log(`Admin user created: ${adminEmail}`);
   }
 }
 
 main()
   .catch(console.error)
   .finally(() => prisma.$disconnect());
+
