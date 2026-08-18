@@ -14,18 +14,31 @@ import adminRoutes from './routes/admin.js';
 import cryptoRoutes from './routes/crypto.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { initDefaultSettings, initAdminUser } from './services/settingsService.js';
+import { execSync } from 'child_process';
 
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Set DATABASE_URL if not provided — Prisma resolves relative paths from schema file
-// dist/index.js -> server/dist/index.js, db at server/prisma/prisma/dev.db
+// __dirname = server/dist at runtime
+// SQLite file lives at server/prisma/dev.db  → one level up from dist, then into prisma
 if (!process.env.DATABASE_URL) {
-  const dbPath = path.resolve(__dirname, '../prisma/prisma/dev.db');
+  const dbPath = path.resolve(__dirname, '../prisma/dev.db');
   process.env.DATABASE_URL = `file:${dbPath}`;
   console.log('[NEXA] DATABASE_URL auto-set to:', process.env.DATABASE_URL);
+}
+
+// Push schema at startup so DB file + tables always exist (safe on SQLite)
+try {
+  const schemaPath = path.resolve(__dirname, '../prisma/schema.prisma');
+  execSync(
+    `npx prisma db push --schema="${schemaPath}" --accept-data-loss --skip-generate`,
+    { stdio: 'pipe', env: { ...process.env } }
+  );
+  console.log('[NEXA] Database schema applied.');
+} catch (e: any) {
+  console.error('[NEXA] Schema push failed (non-fatal):', e?.message ?? e);
 }
 
 
